@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "query": "version",
+  "component": "services/api",
+  "line": "api",
+  "channel": "stable",
+  "base": "2.7.0",
+  "base_from": "channel",
+  "presented": "2.7.0+unknown.6fdd3f1f5edd",
+  "state": {
+    "unknown": true,
+    "dirty": false,
+    "undeclared_evaluated": true,
+    "undeclared": [],
+    "short_hash": "6fdd3f1f5edd"
+  }
+}
