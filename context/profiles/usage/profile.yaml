@@ -1,0 +1,9 @@
+name: usage
+title: toolkit-go - Usage
+description: >-
+  Building a Go command-line tool on toolkit-go: the repository layout,
+  which package covers which concern, and how a binary embeds its relmap
+  changelog and composes version, changelog, update and notice surfaces.
+packages:
+  defaults:
+    - building

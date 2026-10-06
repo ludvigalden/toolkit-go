@@ -1,0 +1,13 @@
+title: toolkit-go
+description: >-
+  The commons Go module for command-line tools: Kong CLI wiring, output
+  modes with stdout for data and stderr for diagnostics, layered
+  configuration, cross-process locks, filesystem enumeration and file
+  classification, a subprocess runner, and a composable update stack
+  (self-update, release notes, update notices) that reads relmap
+  changelog exports. Ships the canonical tool layout as a buildable
+  example.
+path: github.com/ludvigalden/toolkit-go
+name: toolkit_go
+requires: []
+default_profiles: [usage]
