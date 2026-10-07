@@ -1,0 +1,46 @@
+# Package map
+
+Every package is imported as `github.com/ludvigalden/toolkit-go/pkg/<name>`.
+No package holds mutable package-level state: configuration is a value
+passed at construction, and anything that reads the environment takes a
+`getenv func(string) string` (nil means the process environment).
+
+| Package | Covers |
+| --- | --- |
+| `cli` | one `App` value describes a Kong tool: shared `GlobalFlags`, the config cascade (defaults, user and project `<name>.yaml` found by walking up to `$HOME`, `--config`, dotenv files, `<PREFIX>_*` environment, flags), output wiring, session directories. `App.Main` parses, runs, and maps the returned error to an exit code |
+| `output` | text, json, ndjson, yamlish and quiet modes; data to stdout, diagnostics to stderr; verbosity; slog handler; custom renderers via `WithRenderer`; `yamlish` is the standalone YAML-like formatter. No package depends on a terminal-UI library, so all of them work inside interactive applications |
+| `exitcode` | sysexits exit codes (`Usage` 2, `NoInput` 66, `Unavailable` 69, `Software` 70, `TempFail` 75, `Config` 78, …) |
+| `errkind` | fourteen error kinds (`invalid-input`, `not-found`, `unavailable`, …), each retryable or not and mapped to an exit code; `errkind.ExitCode(err)` |
+| `diag` | positioned diagnostics with a suggested fix command, rendered as text or JSON |
+| `xdg` | XDG config, cache, state, data and runtime directories; owner-only directories and atomic file writes |
+| `dotenv` | a strict dotenv parser: no expansion, line-numbered errors |
+| `secret` | a redacting secret `Value` and a TTL-caching `Resolver` over sources (environment, file, command without a shell, a vault interface) |
+| `severity` | slog levels, OpenTelemetry severity numbers, and verbosity thresholds |
+| `procrun` | subprocess runner: discovery, timeouts, graceful stop, streaming stdout, typed errors, a process registry, `ReadStats`; a `Scoper` for resource governance the tool supplies |
+| `proclock` | cross-process advisory locks with owner metadata, under a root directory the caller chooses |
+| `procserve` | one warm background server per identity: connect or spawn, idle timeout, a cap on idle servers, a pluggable control protocol |
+| `fsenum` | gitignore-honoring enumeration (fd when installed), marker discovery, change detection. `Default()` is a ready skip set built from categories — `VCS`, `Dependencies`, `BuildOutputs`, `Caches`, `Coverage`, `Editors`, `OSFiles`, `Backups`, `Binaries`, `Compressed`, `Databases`, `Legacy` — plus opt-in `GeneratedCode`, `Images`, `AgentConfig`; combine with `Union`, apply with `Skip()`. Lockfiles and `.env` are never skipped |
+| `diskfree` | free-space checks before large writes |
+| `supervisor` | OS service management behind one `Supervisor` interface: systemd-user, launchd, and setsid backends, a platform selector, unit identity and naming, maintenance markers, journal tails |
+| `serve` | HTTP server lifecycle: graceful start and shutdown, health and readiness endpoints, binary-change watching, kill escalation |
+| `scratch` | hermetic scratch environments for tool tests: fenced `HOME`, `TMPDIR` and XDG homes, fixtures, cleanup, subprocesses that run inside the fence |
+| `cryptobox` | authenticated encryption of byte streams for untrusted channels: argon2id passphrase (or raw-key) derivation, AES-256-GCM chunks with AAD-bound indexes |
+| `ssrf` | URL validation for fetchers: public hosts only — no loopback, private, link-local or cloud-metadata addresses |
+| `urlnorm` | URL normalization: tracking and session parameter stripping, host-scoped query overrides |
+| `hostnorm` | eTLD+1 hostname normalization for per-host state keying, via the Public Suffix List |
+| `untrusted` | nonce-delimited fencing of untrusted content inside LLM prompts |
+| `update` | `Checker`, `Lister`, `Updater`, `NotesSource`; `Changelog`; `Notice` |
+| `update/relmapx` | reader for relmap exports and `relmap version --json` |
+| `update/ghcli` | GitHub releases through the `gh` CLI; unavailable (never noisy) when `gh` is absent |
+| `update/selfupdate` | binary replacement via go-selfupdate with `checksums.txt` verification — the module's only heavy dependency, isolated in this one package |
+| `update/kongcmd` | ready `version`, `changelog`, `update` Kong commands |
+
+## Dependencies
+
+The module's packages depend on the standard library, `golang.org/x/sys`
+and `golang.org/x/term`, plus Kong and koanf for `cli`,
+`golang.org/x/crypto` for `cryptobox`, and `golang.org/x/net` for
+`hostnorm`.
+`update/selfupdate` adds go-selfupdate and its forge SDKs; nothing else
+imports it. A terminal-UI rendering mode is kept outside the module in
+`draft/terminal` (its own Go module).
