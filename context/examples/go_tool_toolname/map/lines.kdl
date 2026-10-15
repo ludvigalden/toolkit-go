@@ -1,0 +1,8 @@
+repo toolname {
+    line toolname {
+        components "."
+        initial-version "0.1.0"
+        tag "v{version}"
+        channels stable
+    }
+}

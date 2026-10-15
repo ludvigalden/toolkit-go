@@ -1,0 +1,16 @@
+// toolname: one Go module whose root package set is one component.
+repo toolname {
+    import "$relmap/profiles/core/profile.kdl"
+    import "$relmap/profiles/go/profile.kdl"
+
+    // The relmap export embedded into the binary is generated from
+    // changelog/ by `go generate`; it is committed so `go build` works
+    // from a clean clone.
+    class changelog-export {
+        tags generated
+        glob "changelog.*.json" "changelog.ndjson" "version.json" {
+            in-dir "tools/toolname/internal/app/release/data"
+        }
+        set linguist-generated #true
+    }
+}
