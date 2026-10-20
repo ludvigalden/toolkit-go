@@ -1,0 +1,7 @@
+change first-release {
+    summary "List and show items"
+    category added
+    impact public
+    touches "tools/toolname/cmd/main.go"
+    commit "a11ce00000000000000000000000000000000001"
+}

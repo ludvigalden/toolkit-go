@@ -1,0 +1,8 @@
+release toolname version="0.1.0" channel=stable {
+    summary "First release"
+    paragraph "toolname lists and shows items."
+    includes first-release
+    section added {
+        item "List and show items" covers=first-release
+    }
+}
