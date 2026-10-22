@@ -1,0 +1,11 @@
+release toolname version="0.2.0" channel=stable {
+    summary "Changelog and self-update"
+    paragraph "toolname shows its own release notes and can replace itself with the latest release."
+    includes changelog-command list-sort-fix
+    section added {
+        item "Show release notes with toolname changelog" covers=changelog-command
+    }
+    section fixed {
+        item "List items in name order" covers=list-sort-fix
+    }
+}

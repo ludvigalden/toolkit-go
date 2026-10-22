@@ -1,0 +1,7 @@
+change list-sort-fix {
+    summary "List items in name order"
+    category fixed
+    impact public
+    touches "tools/toolname/cmd/main.go"
+    commit "a11ce00000000000000000000000000000000003"
+}

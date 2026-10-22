@@ -1,0 +1,8 @@
+change changelog-command {
+    summary "Show release notes with toolname changelog"
+    category added
+    impact public
+    detail "The changelog is embedded in the binary, so it works offline; releases published after the build are added from GitHub when gh is installed."
+    touches "tools/toolname/cmd/main.go"
+    commit "a11ce00000000000000000000000000000000002"
+}
