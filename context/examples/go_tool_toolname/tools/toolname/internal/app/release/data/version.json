@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "query": "version",
+  "component": ".",
+  "line": "toolname",
+  "channel": "stable",
+  "base": "0.2.0",
+  "base_from": "channel",
+  "presented": "0.2.0+unknown",
+  "state": {
+    "unknown": true,
+    "dirty": false,
+    "undeclared_evaluated": false,
+    "undeclared": []
+  }
+}
