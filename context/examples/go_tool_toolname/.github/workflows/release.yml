@@ -1,0 +1,40 @@
+# Cut a GitHub release whose description is the relmap-rendered notes
+# of the tagged version; `toolname changelog` and `toolname update` read it.
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - name: Install relmap
+        run: go install github.com/ludvigalden/relmap/tools/relmap@latest
+      - name: Check every commit is declared in the changelog
+        run: relmap coverage
+      - name: Refresh the embedded export
+        run: go generate ./...
+      - name: Build
+        run: |
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 darwin/arm64; do
+            GOOS=${target%/*} GOARCH=${target#*/} go build \
+              -ldflags "-X main.version=${GITHUB_REF_NAME#v}" \
+              -o "dist/toolname_${GITHUB_REF_NAME#v}_${target%/*}_${target#*/}" ./tools/toolname/cmd
+          done
+          (cd dist && sha256sum * > checksums.txt)
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          relmap export --out notes --target markdown --tree
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --notes-file "notes/changelog/toolname/${GITHUB_REF_NAME#v}.md"
