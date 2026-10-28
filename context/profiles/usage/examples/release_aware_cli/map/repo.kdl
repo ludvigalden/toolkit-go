@@ -1,0 +1,15 @@
+// shipit: one Go module, released as one line.
+repo shipit {
+    import "$relmap/profiles/core/profile.kdl"
+    import "$relmap/profiles/go/profile.kdl"
+
+    // The export embedded into the binary is generated, and committed so
+    // a clean clone builds.
+    class changelog-export {
+        tags generated
+        glob "changelog.*.json" "changelog.ndjson" "version.json" {
+            in-dir "tools/shipit/internal/app/relnotes/data"
+        }
+        set linguist-generated #true
+    }
+}

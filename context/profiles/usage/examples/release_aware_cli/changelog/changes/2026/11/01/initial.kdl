@@ -1,0 +1,7 @@
+change initial {
+    summary "Print the version and release notes"
+    category added
+    impact public
+    touches "tools/shipit/cmd/main.go"
+    commit "5e1f000000000000000000000000000000000001"
+}

@@ -1,0 +1,8 @@
+release shipit version="1.0.0" channel=stable {
+    summary "First release"
+    paragraph "shipit knows its own version and release notes."
+    includes initial
+    section added {
+        item "Print the version and release notes" covers=initial
+    }
+}

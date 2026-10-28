@@ -1,0 +1,8 @@
+repo shipit {
+    line shipit {
+        components "."
+        initial-version "1.0.0"
+        tag "v{version}"
+        channels stable
+    }
+}

@@ -1,0 +1,3 @@
+changelog {
+    import "$relmap/profiles/core/changelog.kdl"
+}
