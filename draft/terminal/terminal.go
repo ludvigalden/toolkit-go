@@ -87,6 +87,9 @@ func (r *renderer) Result(data any) {
 	text.Result(data)
 }
 
+// Event is dropped: the screen shows diagnostics, not side records.
+func (r *renderer) Event(string, map[string]any) {}
+
 // Close tears the screen down, then replays the log on stderr so it
 // survives in the scrollback.
 func (r *renderer) Close(output.Outcome) error {

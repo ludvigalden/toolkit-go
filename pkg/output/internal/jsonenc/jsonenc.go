@@ -48,6 +48,22 @@ func (w *Writer) Diagnostic(kind string, t time.Time, msg, code string) {
 	_ = w.stderr.Encode(line) //nolint:errcheck // stderr write failures are not actionable
 }
 
+// Event writes {kind, version, ...fields}: on stdout when streaming,
+// on stderr otherwise so the json document stays whole. kind and
+// version win over same-named fields.
+func (w *Writer) Event(kind string, fields map[string]any) {
+	line := make(map[string]any, len(fields)+2)
+	for k, v := range fields {
+		line[k] = v
+	}
+	line["kind"], line["version"] = kind, 1
+	enc := w.stderr
+	if w.stream {
+		enc = w.stdout
+	}
+	_ = enc.Encode(line) //nolint:errcheck // a closed stream ends the run's records
+}
+
 // Result adds data; a slice (other than []byte) contributes one record
 // per element.
 func (w *Writer) Result(data any) {

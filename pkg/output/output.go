@@ -161,6 +161,17 @@ func (o *Output) Result(data any) {
 	}
 }
 
+// Event writes a structured side record: ndjson puts it on stdout as
+// {kind, version, ...fields}, json on stderr so stdout stays one
+// document; text modes drop it.
+func (o *Output) Event(kind string, fields map[string]any) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if !o.closed {
+		o.r.Event(kind, fields)
+	}
+}
+
 // Close finishes the stdout document. It is idempotent.
 func (o *Output) Close() error {
 	o.mu.Lock()

@@ -95,6 +95,7 @@ type Outcome struct {
 type Renderer interface {
 	Log(r Record)
 	Result(data any)
+	Event(kind string, fields map[string]any)
 	Close(o Outcome) error
 }
 

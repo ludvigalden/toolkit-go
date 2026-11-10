@@ -151,9 +151,10 @@ func TestUnknownModeIsError(t *testing.T) {
 
 type recorder struct{ logs []Record }
 
-func (r *recorder) Log(rec Record)      { r.logs = append(r.logs, rec) }
-func (r *recorder) Result(any)          {}
-func (r *recorder) Close(Outcome) error { return nil }
+func (r *recorder) Log(rec Record)               { r.logs = append(r.logs, rec) }
+func (r *recorder) Result(any)                   {}
+func (r *recorder) Event(string, map[string]any) {}
+func (r *recorder) Close(Outcome) error          { return nil }
 
 func TestWithRendererAndCloseIdempotent(t *testing.T) {
 	rec := &recorder{}
