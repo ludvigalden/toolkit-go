@@ -44,13 +44,14 @@ func serve(mode string) {
 		// On SIGTERM: release the lock, linger, re-acquire as a fresh
 		// acquisition and keep running. Stop's identity re-check must
 		// abort the signal chain instead of escalating to SIGKILL.
+		<-sig
 		_ = l.Release() //nolint:errcheck // helper
 		time.Sleep(20 * time.Millisecond)
 		l2, err := proclock.Acquire(context.Background(), helperLock())
 		if err != nil {
 			os.Exit(2)
 		}
-		<-sig
+		<-sig            // a second signal (or SIGKILL from the test) ends it
 		_ = l2.Release() //nolint:errcheck // helper
 		return
 	}
