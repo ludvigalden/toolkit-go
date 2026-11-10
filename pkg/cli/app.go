@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
+	"github.com/knadh/koanf/v2"
 
 	"github.com/ludvigalden/toolkit-go/pkg/cli/internal/kongx"
 	"github.com/ludvigalden/toolkit-go/pkg/cli/internal/wiring"
@@ -39,6 +40,16 @@ type App struct {
 	Getenv           func(string) string
 	// OutputOptions extend output.New, e.g. a custom renderer.
 	OutputOptions []output.Option
+	// ConfigureOutput adds options that depend on resolved config, such
+	// as a log file; they apply after OutputOptions, and Close runs with
+	// Run.Close. An error exits CantCreate.
+	ConfigureOutput func(cfg *koanf.Koanf, g Global) (OutputSetup, error)
+}
+
+// OutputSetup is what ConfigureOutput contributes to one run.
+type OutputSetup struct {
+	Options []output.Option
+	Close   func() error
 }
 
 // Main parses args, runs the selected command with binds, and returns

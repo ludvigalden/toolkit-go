@@ -31,6 +31,8 @@ type Run struct {
 	Out    *output.Output
 	Logger *slog.Logger
 	sink   io.Closer
+	// release closes what App.ConfigureOutput opened.
+	release func() error
 }
 
 // Paths are the tool's XDG directories. None is created; make the ones
@@ -58,12 +60,17 @@ func (r *Run) Exec(binds ...any) int {
 	return int(errkind.ExitCode(err))
 }
 
-// Close finishes the output document and closes the debug log.
+// Close finishes the output document, then closes the debug log and
+// whatever App.ConfigureOutput opened.
 func (r *Run) Close() error {
 	err := r.Out.Close()
 	if r.sink != nil {
 		_ = r.sink.Close() //nolint:errcheck // the log file is best effort
 		r.sink = nil
+	}
+	if r.release != nil {
+		err = errors.Join(err, r.release())
+		r.release = nil
 	}
 	return err
 }
@@ -181,16 +188,36 @@ func (a *App) wire(run *Run, k *koanf.Koanf) error {
 		opts = append(opts, output.WithLogHandler(h))
 		level = min(level, slog.LevelDebug)
 	}
-	out, err := output.New(a.stdout(), stderr, append(opts, a.OutputOptions...)...)
-	if err != nil {
-		if run.sink != nil {
-			_ = run.sink.Close() //nolint:errcheck // already failing
+	opts = append(opts, a.OutputOptions...)
+	if a.ConfigureOutput != nil {
+		setup, err := a.ConfigureOutput(k, run.Global)
+		if err != nil {
+			run.abandon()
+			return fmt.Errorf("configure output: %w", err)
 		}
+		opts = append(opts, setup.Options...)
+		run.release = setup.Close
+	}
+	out, err := output.New(a.stdout(), stderr, opts...)
+	if err != nil {
+		run.abandon()
 		return outputModeError{err}
 	}
 	run.Out = out
 	run.Logger = slog.New(output.NewSlogHandler(out, level))
 	return nil
+}
+
+// abandon closes what wire opened before output creation failed.
+func (r *Run) abandon() {
+	if r.sink != nil {
+		_ = r.sink.Close() //nolint:errcheck // already failing
+		r.sink = nil
+	}
+	if r.release != nil {
+		_ = r.release() //nolint:errcheck // already failing
+		r.release = nil
+	}
 }
 
 // outputModeError marks a renderer-creation failure: when the stdout
