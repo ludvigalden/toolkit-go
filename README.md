@@ -18,19 +18,19 @@ Public packages live under `pkg/`, imported as
 `github.com/ludvigalden/toolkit-go/pkg/<name>`; implementation detail
 sits in `internal/` directories beside them:
 
-| Package | For |
-| --- | --- |
-| `cli`, `output`, `exitcode`, `errkind`, `diag` | a Kong CLI with shared flags and a config cascade, output modes, exit codes, error kinds, positioned diagnostics |
-| `xdg`, `dotenv`, `secret`, `severity`, `yamlish` | standard directories, dotenv files, redacted secrets, log severities, a YAML-like text formatter |
-| `procrun`, `proclock`, `procserve`, `diskfree` | subprocesses, cross-process locks, warm background servers, free space |
-| `supervisor` | OS service management via systemd-user, launchd, or setsid |
-| `fsenum` | gitignore-honoring repository enumeration with categorized default skip sets |
-| `serve` | HTTP server lifecycle: graceful shutdown, health endpoints, kill escalation |
-| `scratch` | hermetic scratch environments for tool tests |
-| `cryptobox` | passphrase and raw-key authenticated encryption of byte streams |
-| `ssrf`, `urlnorm`, `hostnorm` | fetcher URL validation, tracking-param normalization, eTLD+1 host keying |
-| `untrusted` | nonce-delimited fencing of untrusted content in prompts |
-| `update`, `update/relmapx`, `update/ghcli`, `update/selfupdate`, `update/kongcmd` | release awareness |
+| Package                                                                           | For                                                                                                              |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `cli`, `output`, `exitcode`, `errkind`, `diag`                                    | a Kong CLI with shared flags and a config cascade, output modes, exit codes, error kinds, positioned diagnostics |
+| `xdg`, `dotenv`, `secret`, `severity`, `yamlish`                                  | standard directories, dotenv files, redacted secrets, log severities, a YAML-like text formatter                 |
+| `procrun`, `proclock`, `procserve`, `diskfree`                                    | subprocesses, cross-process locks, warm background servers, free space                                           |
+| `supervisor`                                                                      | OS service management via systemd-user, launchd, or setsid                                                       |
+| `fsenum`                                                                          | gitignore-honoring repository enumeration with categorized default skip sets                                     |
+| `serve`                                                                           | HTTP server lifecycle: graceful shutdown, health endpoints, kill escalation                                      |
+| `scratch`                                                                         | hermetic scratch environments for tool tests                                                                     |
+| `cryptobox`                                                                       | passphrase and raw-key authenticated encryption of byte streams                                                  |
+| `ssrf`, `urlnorm`, `hostnorm`                                                     | fetcher URL validation, tracking-param normalization, eTLD+1 host keying                                         |
+| `untrusted`                                                                       | nonce-delimited fencing of untrusted content in prompts                                                          |
+| `update`, `update/relmapx`, `update/ghcli`, `update/selfupdate`, `update/kongcmd` | release awareness                                                                                                |
 
 No package keeps mutable package-level state; configuration is passed
 as values, and the environment is injected where it is read. Packages

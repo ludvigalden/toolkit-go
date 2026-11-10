@@ -29,13 +29,13 @@ at generation time) and `+dirty` when forced on the build machine.
 
 ## Composing the surfaces
 
-| Surface | Compose | Without `gh` |
-| --- | --- | --- |
-| version | `kongcmd.VersionCmd` with `Deps.Build` | works |
-| changelog | `update.Changelog{Embedded, Line, Remote: ghcli.New(repo)}` | embedded releases only; `View.RemoteUnavailable` |
-| update check | `ghcli.New(repo)` as `update.Checker` | `update.ErrUnavailable` |
-| self-update | `selfupdate.New(selfupdate.Config{Repo})` as `update.Updater` | uses the GitHub API directly; `kongcmd` reports unavailable when no updater is wired |
-| notice | `update.Notice{Tool, Current, Checker}`; call `Show` after a command | silent |
+| Surface      | Compose                                                              | Without `gh`                                                                         |
+| ------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| version      | `kongcmd.VersionCmd` with `Deps.Build`                               | works                                                                                |
+| changelog    | `update.Changelog{Embedded, Line, Remote: ghcli.New(repo)}`          | embedded releases only; `View.RemoteUnavailable`                                     |
+| update check | `ghcli.New(repo)` as `update.Checker`                                | `update.ErrUnavailable`                                                              |
+| self-update  | `selfupdate.New(selfupdate.Config{Repo})` as `update.Updater`        | uses the GitHub API directly; `kongcmd` reports unavailable when no updater is wired |
+| notice       | `update.Notice{Tool, Current, Checker}`; call `Show` after a command | silent                                                                               |
 
 The notice checks at most once per `TTL` (default 24h), caching under
 the user cache directory, and is off when `CI` is set, stderr is not a
