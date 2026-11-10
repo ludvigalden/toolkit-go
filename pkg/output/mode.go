@@ -76,6 +76,7 @@ const (
 	KindInfo     Kind = "info"
 	KindSuccess  Kind = "success"
 	KindProgress Kind = "progress"
+	KindNotice   Kind = "notice"
 	KindWarn     Kind = "warn"
 	KindError    Kind = "error"
 )

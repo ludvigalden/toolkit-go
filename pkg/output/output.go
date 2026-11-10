@@ -134,6 +134,9 @@ func (o *Output) Success(msg string, args ...any) { o.log(KindSuccess, nil, msg,
 // Progress reports advancement of a long step, shown at VerbosityInfo.
 func (o *Output) Progress(msg string, args ...any) { o.log(KindProgress, nil, msg, args) }
 
+// Notice is information shown by default, not a warning.
+func (o *Output) Notice(msg string, args ...any) { o.log(KindNotice, nil, msg, args) }
+
 // Warn reports something the user should act on, shown by default.
 func (o *Output) Warn(msg string, args ...any) { o.log(KindWarn, nil, msg, args) }
 

@@ -292,3 +292,18 @@ func TestLogHandlerRepeatable(t *testing.T) {
 		t.Errorf("a = %q, b = %q", a.String(), b.String())
 	}
 }
+
+func TestNotice(t *testing.T) {
+	o, _, stderr := newTest(t)
+	o.Notice("shown %s", "by default")
+	o, _, quiet := newTest(t, WithVerbosity(VerbosityError))
+	o.Notice("hidden")
+	if got := stderr.String(); got != "03:04:05 INFO shown by default\n" || quiet.Len() != 0 {
+		t.Errorf("warn: %q, error: %q", got, quiet.String())
+	}
+	o, _, js := newTest(t, WithMode(ModeJSON))
+	o.Notice("n")
+	if !strings.Contains(js.String(), `"kind":"notice"`) {
+		t.Errorf("json = %q", js.String())
+	}
+}

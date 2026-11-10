@@ -80,7 +80,7 @@ func (v Verbosity) admits(k Kind, fatal bool) bool {
 	switch k {
 	case KindError:
 		return v >= VerbosityError
-	case KindWarn:
+	case KindWarn, KindNotice:
 		return v >= VerbosityWarn
 	case KindDebug:
 		return v >= VerbosityDebug
