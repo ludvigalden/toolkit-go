@@ -38,6 +38,11 @@ type App struct {
 	// directory up to $HOME; nil means "<name>.yaml" and ".<name>.yaml".
 	LocalConfigNames []string
 	Getenv           func(string) string
+	// EnvFallbacks lists variables read for a config key after its
+	// <PREFIX>_ name, in order. Built in: stdout_format falls back to
+	// STDOUT_FORMAT; an entry here replaces the built-in for its key,
+	// and a nil entry removes it.
+	EnvFallbacks map[string][]string
 	// OutputOptions extend output.New, e.g. a custom renderer.
 	OutputOptions []output.Option
 	// ConfigureOutput adds options that depend on resolved config, such

@@ -295,3 +295,27 @@ func TestCloseFailureReportsAndExitsSoftware(t *testing.T) {
 		t.Errorf("close error not reported on stderr: %q", errb.String())
 	}
 }
+
+func TestStdoutFormatFallback(t *testing.T) {
+	_, _, env := sandbox(t)
+	env["STDOUT_FORMAT"] = "json"
+	if _, out, _ := run(t, env, "show"); !strings.HasPrefix(out, `{"`) {
+		t.Errorf("STDOUT_FORMAT fallback ignored: %q", out)
+	}
+	env["DEMO_STDOUT_FORMAT"] = "text"
+	if _, out, _ := run(t, env, "show"); strings.HasPrefix(out, `{"`) {
+		t.Errorf("prefixed variable lost to the fallback: %q", out)
+	}
+	delete(env, "DEMO_STDOUT_FORMAT")
+	var out bytes.Buffer
+	app := &App{
+		Name: "demo", Stdout: &out, Stderr: io.Discard,
+		Getenv:       func(k string) string { return env[k] },
+		EnvFallbacks: map[string][]string{"stdout_format": nil, "session": {"SHARED_SESSION"}},
+	}
+	env["SHARED_SESSION"] = "s1"
+	if code := app.Main(&root{}, []string{"show"}); code != 0 || strings.HasPrefix(out.String(), `{"`) ||
+		!strings.Contains(out.String(), "s1") {
+		t.Errorf("tool fallbacks: code %d stdout %q", code, out.String())
+	}
+}

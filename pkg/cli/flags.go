@@ -8,8 +8,9 @@ import (
 
 // GlobalFlags are the flags every tool shares; embed it in the grammar
 // root. Each maps to config key stdout_format and env var
-// <PREFIX>_STDOUT_FORMAT (style); <PREFIX>_SESSION and
-// <PREFIX>_DEBUG_LOG have no flag. Resolved values live in Global.
+// <PREFIX>_STDOUT_FORMAT (style; plain STDOUT_FORMAT is the fallback);
+// <PREFIX>_SESSION and <PREFIX>_DEBUG_LOG have no flag. Resolved values
+// live in Global.
 type GlobalFlags struct {
 	StdoutFormat    string   `name:"stdout-format" help:"Format of the data payload on stdout (text, json, ndjson, yamlish, quiet, or a mode the tool registers); diagnostics always go to stderr." default:"text"`
 	StdoutVerbosity string   `name:"stdout-verbosity" help:"Which diagnostics reach stderr: silent, quiet, error, warn, info, verbose, debug, trace (or 0-10). Default: warn."`

@@ -103,6 +103,7 @@ func (a *App) prepare(grammar any, kctx *kong.Context) (*Run, error) {
 		UserDir: filepath.Join(dirs.ConfigHome, a.Name), Profile: profile,
 		Walk: cascade.WalkUp(cwd, home), LocalNames: cascade.LocalNamesFor(a.Name, a.LocalConfigNames),
 		Files: g.Config, EnvFiles: g.EnvFile,
+		EnvFallbacks: cascade.FallbacksWithBuiltins(a.EnvFallbacks),
 		// The App.Getenv convention encodes "unset" as "", so only a
 		// non-empty value carries presence here.
 		Getenv: func(key string) (string, bool) {

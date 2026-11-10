@@ -34,7 +34,10 @@ type Layers struct {
 	// set to the empty string is present and wins over dotenv and
 	// config layers. Nil means os.LookupEnv.
 	Getenv func(string) (string, bool)
-	Flags  map[string]any
+	// EnvFallbacks lists extra variables per config key, read in order
+	// when the prefixed variable is absent.
+	EnvFallbacks map[string][]string
+	Flags        map[string]any
 }
 
 // Load builds the cascade: defaults, user config.yaml, profile, the
@@ -124,8 +127,11 @@ func (l Layers) envValues(keys []string, lookup func(string) (string, bool)) map
 	for _, key := range keys {
 		envKey := strings.TrimPrefix(key, ns)
 		envKey = l.Prefix + strings.ToUpper(strings.NewReplacer(".", "_", "-", "_").Replace(envKey))
-		if v, ok := lookup(envKey); ok {
-			out[key] = v
+		for _, name := range append([]string{envKey}, l.EnvFallbacks[key]...) {
+			if v, ok := lookup(name); ok {
+				out[key] = v
+				break
+			}
 		}
 	}
 	return out
@@ -202,6 +208,17 @@ func WithBuiltins(tool map[string]any) map[string]any {
 		d[k] = v
 	}
 	return d
+}
+
+// FallbacksWithBuiltins returns the shared fallbacks (plain
+// STDOUT_FORMAT for stdout_format) overlaid with the tool's: a tool
+// entry replaces the built-in one for its key, and a nil entry drops it.
+func FallbacksWithBuiltins(tool map[string][]string) map[string][]string {
+	f := map[string][]string{"stdout_format": {"STDOUT_FORMAT"}}
+	for k, v := range tool {
+		f[k] = v
+	}
+	return f
 }
 
 // LocalNamesFor returns override, or "<name>.yaml" and ".<name>.yaml"

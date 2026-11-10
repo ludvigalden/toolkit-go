@@ -88,3 +88,46 @@ func TestEnvPresenceSemantics(t *testing.T) {
 		t.Errorf("process env set-but-empty lost to dotenv: %q", got)
 	}
 }
+
+func TestEnvFallbacks(t *testing.T) {
+	f := FallbacksWithBuiltins(map[string][]string{"session": {"OTHER_SESSION"}})
+	if strings.Join(f["stdout_format"], ",") != "STDOUT_FORMAT" || f["session"][0] != "OTHER_SESSION" {
+		t.Errorf("fallbacks %v", f)
+	}
+	if f := FallbacksWithBuiltins(map[string][]string{"stdout_format": nil}); len(f["stdout_format"]) != 0 {
+		t.Errorf("nil entry kept the built-in: %v", f)
+	}
+	user := t.TempDir()
+	if err := os.WriteFile(filepath.Join(user, ".env"), []byte("A_FMT=dotenv\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	load := func(env map[string]string) string {
+		t.Helper()
+		k, err := Layers{
+			Name: "demo", Prefix: "DEMO_", UserDir: user,
+			Defaults:     map[string]any{"fmt": "default"},
+			EnvFallbacks: map[string][]string{"fmt": {"A_FMT", "B_FMT"}},
+			Getenv: func(key string) (string, bool) {
+				v, ok := env[key]
+				return v, ok
+			},
+		}.Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return k.String("fmt")
+	}
+	for _, c := range []struct {
+		env  map[string]string
+		want string
+	}{
+		{map[string]string{"DEMO_FMT": "prefixed", "A_FMT": "a", "B_FMT": "b"}, "prefixed"},
+		{map[string]string{"A_FMT": "a", "B_FMT": "b"}, "a"},
+		{map[string]string{"B_FMT": "b"}, "dotenv"},
+		{map[string]string{}, "dotenv"},
+	} {
+		if got := load(c.env); got != c.want {
+			t.Errorf("env %v: %q, want %q", c.env, got, c.want)
+		}
+	}
+}

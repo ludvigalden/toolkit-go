@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"io"
 	"log/slog"
 	"strings"
 	"testing"
@@ -56,7 +57,7 @@ func TestConfigureOutputErrors(t *testing.T) {
 	_, _, env := sandbox(t)
 	var errb bytes.Buffer
 	app := &App{
-		Name: "demo", Stderr: &errb,
+		Name: "demo", Stdout: io.Discard, Stderr: &errb,
 		Getenv: func(k string) string { return env[k] },
 		ConfigureOutput: func(*koanf.Koanf, Global) (OutputSetup, error) {
 			return OutputSetup{}, errors.New("log file locked")
@@ -71,7 +72,7 @@ func TestConfigureOutputErrors(t *testing.T) {
 
 	closed := false
 	app = &App{
-		Name: "demo", Stderr: &errb,
+		Name: "demo", Stdout: io.Discard, Stderr: &errb,
 		Getenv: func(k string) string { return env[k] },
 		ConfigureOutput: func(*koanf.Koanf, Global) (OutputSetup, error) {
 			return OutputSetup{Close: func() error { closed = true; return nil }}, nil
