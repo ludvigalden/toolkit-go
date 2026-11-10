@@ -1,6 +1,5 @@
 // Package wiring holds the per-invocation plumbing behind cli: the
-// environment prefix, session IDs, the slog level a verbosity implies,
-// and the JSON-lines debug log sink.
+// environment prefix, session IDs, and the JSON-lines debug log sink.
 package wiring
 
 import (
@@ -10,9 +9,6 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-
-	"github.com/ludvigalden/toolkit-go/pkg/output"
-	"github.com/ludvigalden/toolkit-go/pkg/severity"
 )
 
 // EnvPrefix returns override, or name upper-cased with dashes as
@@ -30,20 +26,6 @@ func SessionID() string {
 	b := make([]byte, 4)
 	_, _ = rand.Read(b) //nolint:errcheck // crypto/rand.Read never fails on supported platforms
 	return hex.EncodeToString(b)
-}
-
-// LevelFor maps the stdout verbosity onto the slog threshold library
-// logging should use.
-func LevelFor(v output.Verbosity) slog.Level {
-	switch {
-	case v >= output.VerbosityTrace:
-		return severity.LevelTrace
-	case v >= output.VerbosityDebug:
-		return slog.LevelDebug
-	case v >= output.VerbosityInfo:
-		return slog.LevelInfo
-	}
-	return slog.LevelWarn
 }
 
 // DebugLog opens path for appending and returns a debug-level JSON

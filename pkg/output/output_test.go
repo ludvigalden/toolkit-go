@@ -13,6 +13,7 @@ import (
 
 	"github.com/ludvigalden/toolkit-go/pkg/diag"
 	"github.com/ludvigalden/toolkit-go/pkg/errkind"
+	"github.com/ludvigalden/toolkit-go/pkg/severity"
 )
 
 var fixed = time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
@@ -266,6 +267,18 @@ func TestArgsStructured(t *testing.T) {
 	for m, want := range map[Mode]bool{ModeJSON: true, ModeNDJSON: true, ModeText: false, ModeYamlish: false, ModeQuiet: false, "custom": false} {
 		if got := (Args{Mode: m}).Structured(); got != want {
 			t.Errorf("%s: Structured = %v", m, got)
+		}
+	}
+}
+
+func TestVerbosityLevel(t *testing.T) {
+	for v, want := range map[Verbosity]slog.Level{
+		VerbositySilent: slog.LevelWarn, VerbosityWarn: slog.LevelWarn, VerbosityInfo: slog.LevelInfo,
+		VerbosityVerbose: slog.LevelInfo, VerbosityDebug: slog.LevelDebug, VerbosityTrace: severity.LevelTrace,
+		VerbosityMax: severity.LevelTrace,
+	} {
+		if got := v.Level(); got != want {
+			t.Errorf("%s.Level() = %v, want %v", v, got, want)
 		}
 	}
 }

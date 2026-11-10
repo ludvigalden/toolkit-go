@@ -148,7 +148,7 @@ func (a *App) global(k *koanf.Koanf, cwd, profile string, dirs xdg.Dirs) (Global
 	return Global{
 		AppName: a.Name, Profile: profile, Cwd: cwd, ExeDir: exeDir,
 		SessionID: session, OutputMode: mode, Verbosity: verb,
-		LogLevel: wiring.LevelFor(verb), Debug: k.Bool("debug") || verb >= output.VerbosityDebug,
+		LogLevel: verb.Level(), Debug: k.Bool("debug") || verb >= output.VerbosityDebug,
 		Dirs: Paths{
 			Config: filepath.Join(dirs.ConfigHome, a.Name),
 			Cache:  filepath.Join(dirs.CacheHome, a.Name),

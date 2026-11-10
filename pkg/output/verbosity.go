@@ -2,8 +2,11 @@ package output
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
+
+	"github.com/ludvigalden/toolkit-go/pkg/severity"
 )
 
 // Verbosity is the 0-10 diagnostic threshold. Results are never gated;
@@ -53,6 +56,19 @@ func ParseVerbosity(s string) (Verbosity, error) {
 		}
 	}
 	return 0, fmt.Errorf("invalid verbosity %q: must be a level name (silent..max) or 0-10", s)
+}
+
+// Level is the slog threshold library logging should use at v.
+func (v Verbosity) Level() slog.Level {
+	switch {
+	case v >= VerbosityTrace:
+		return severity.LevelTrace
+	case v >= VerbosityDebug:
+		return slog.LevelDebug
+	case v >= VerbosityInfo:
+		return slog.LevelInfo
+	}
+	return slog.LevelWarn
 }
 
 // admits reports whether a diagnostic of kind k is shown. A failure

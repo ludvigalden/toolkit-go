@@ -1,11 +1,6 @@
 package wiring
 
-import (
-	"log/slog"
-	"testing"
-
-	"github.com/ludvigalden/toolkit-go/pkg/output"
-)
+import "testing"
 
 func TestEnvPrefix(t *testing.T) {
 	for _, c := range [][3]string{{"my-tool", "", "MY_TOOL_"}, {"x", "CUSTOM_", "CUSTOM_"}, {"x", "CUSTOM", "CUSTOM_"}} {
@@ -15,10 +10,7 @@ func TestEnvPrefix(t *testing.T) {
 	}
 }
 
-func TestLevelForAndSessionID(t *testing.T) {
-	if LevelFor(output.VerbosityWarn) != slog.LevelWarn || LevelFor(output.VerbosityDebug) != slog.LevelDebug {
-		t.Error("LevelFor")
-	}
+func TestSessionID(t *testing.T) {
 	if id := SessionID(); len(id) != 8 {
 		t.Errorf("SessionID = %q", id)
 	}
