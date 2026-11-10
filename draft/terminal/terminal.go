@@ -89,7 +89,7 @@ func (r *renderer) Result(data any) {
 
 // Close tears the screen down, then replays the log on stderr so it
 // survives in the scrollback.
-func (r *renderer) Close(error) error {
+func (r *renderer) Close(output.Outcome) error {
 	if r.program != nil {
 		<-r.ready
 		r.program.Send(quitMsg{})

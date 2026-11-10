@@ -167,7 +167,7 @@ func (o *Output) Close() error {
 	defer o.mu.Unlock()
 	if !o.closed {
 		o.closed = true
-		o.closeErrs = o.r.Close(o.failed)
+		o.closeErrs = o.r.Close(Outcome{Err: o.failed})
 	}
 	return o.closeErrs
 }

@@ -76,10 +76,26 @@ type Failure struct {
 	Code    string
 }
 
+// reserved reports the engine keys a caller's fields never replace.
+func reserved(k string) bool {
+	switch k {
+	case "version", "kind", "status", "result_records", "value", "message", "code":
+		return true
+	}
+	return false
+}
+
 // Close writes the envelope (json) or the completed record (ndjson):
-// status, result_records, and the failure's message and code.
-func (w *Writer) Close(failed *Failure) error {
-	doc := map[string]any{"version": 1, "status": "ok", "result_records": w.count}
+// status, result_records, the failure's message and code, and fields
+// except reserved keys.
+func (w *Writer) Close(failed *Failure, fields map[string]any) error {
+	doc := map[string]any{}
+	for k, v := range fields {
+		if !reserved(k) {
+			doc[k] = v
+		}
+	}
+	doc["version"], doc["status"], doc["result_records"] = 1, "ok", w.count
 	if w.stream {
 		doc["kind"] = "completed"
 	} else {

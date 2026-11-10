@@ -227,9 +227,9 @@ func TestDebugLog(t *testing.T) {
 
 type markRenderer struct{ w io.Writer }
 
-func (m markRenderer) Log(output.Record) {}
-func (m markRenderer) Result(any)        { _, _ = io.WriteString(m.w, "custom\n") }
-func (m markRenderer) Close(error) error { return nil }
+func (m markRenderer) Log(output.Record)          {}
+func (m markRenderer) Result(any)                 { _, _ = io.WriteString(m.w, "custom\n") }
+func (m markRenderer) Close(output.Outcome) error { return nil }
 
 func TestRegisteredModeIsSelectable(t *testing.T) {
 	_, _, env := sandbox(t)
@@ -262,9 +262,9 @@ func TestStdoutFormatExitCodes(t *testing.T) {
 
 type brokenClose struct{}
 
-func (brokenClose) Log(output.Record) {}
-func (brokenClose) Result(any)        {}
-func (brokenClose) Close(error) error { return errors.New("sink exploded") }
+func (brokenClose) Log(output.Record)          {}
+func (brokenClose) Result(any)                 {}
+func (brokenClose) Close(output.Outcome) error { return errors.New("sink exploded") }
 
 func TestCloseFailureReportsAndExitsSoftware(t *testing.T) {
 	_, _, env := sandbox(t)

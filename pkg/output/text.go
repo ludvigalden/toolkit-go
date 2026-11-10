@@ -62,7 +62,7 @@ func (t *textRenderer) Result(data any) {
 	}
 }
 
-func (t *textRenderer) Close(error) error { return nil }
+func (t *textRenderer) Close(Outcome) error { return nil }
 
 // renderText renders data for text mode: its own text when it has one,
 // strings verbatim, everything else as unbudgeted yamlish.

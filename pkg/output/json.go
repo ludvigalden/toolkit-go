@@ -24,9 +24,9 @@ func (j *jsonRenderer) Log(r Record) { j.w.Diagnostic(string(r.Kind), r.Time, r.
 
 func (j *jsonRenderer) Result(data any) { j.w.Result(resolveData(data, j.args)) }
 
-func (j *jsonRenderer) Close(failed error) error {
-	if failed == nil {
-		return j.w.Close(nil)
+func (j *jsonRenderer) Close(o Outcome) error {
+	if o.Err == nil {
+		return j.w.Close(nil, o.Fields)
 	}
-	return j.w.Close(&jsonenc.Failure{Message: failed.Error(), Code: ErrorCode(failed)})
+	return j.w.Close(&jsonenc.Failure{Message: o.Err.Error(), Code: ErrorCode(o.Err)}, o.Fields)
 }

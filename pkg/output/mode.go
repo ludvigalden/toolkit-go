@@ -80,13 +80,22 @@ type Record struct {
 	Err     error
 }
 
+// Outcome is how a run ended, handed to Renderer.Close.
+type Outcome struct {
+	// Err is the run's failure, nil for a successful run.
+	Err error
+	// Fields are extra top-level keys for structured final records.
+	// Engine keys (version, kind, status, result_records, value,
+	// message, code) are never overwritten.
+	Fields map[string]any
+}
+
 // Renderer implements one Mode. Output serializes calls, so renderers
-// need no locking of their own. failed is the error given to Fail, nil
-// for a successful run.
+// need no locking of their own.
 type Renderer interface {
 	Log(r Record)
 	Result(data any)
-	Close(failed error) error
+	Close(o Outcome) error
 }
 
 // Factory builds a Renderer for one Output.
