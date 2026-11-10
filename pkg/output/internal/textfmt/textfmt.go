@@ -14,16 +14,18 @@ import (
 	"golang.org/x/term"
 )
 
-// ANSI palette for diagnostic lines.
+// ANSI palette for diagnostic lines and tool text.
 const (
-	ansiReset = "\033[0m"
-	ansiBold  = "\033[1m"
-	ansiDim   = "\033[38;5;240m"
-	ansiInfo  = "\033[38;5;245m"
-	ansiWarn  = "\033[38;5;214m"
-	ansiErr   = "\033[38;5;196m"
-	ansiOK    = "\033[38;5;42m"
-	ansiProg  = "\033[38;5;51m"
+	Reset   = "\033[0m"
+	Dim     = "\033[38;5;240m"
+	Info    = "\033[38;5;245m"
+	Warn    = "\033[38;5;214m"
+	Error   = "\033[38;5;196m"
+	Success = "\033[38;5;42m"
+	Key     = "\033[36m"
+
+	bold     = "\033[1m"
+	progress = "\033[38;5;51m"
 )
 
 // Line renders "HH:MM:SS LABEL [code] message" for a diagnostic of
@@ -37,26 +39,26 @@ func Line(t time.Time, kind string, failure bool, code, msg string, color bool) 
 	if !color {
 		return ts + " " + label + " " + msg
 	}
-	return ansiDim + ts + ansiReset + " " + tint + label + ansiReset + " " + msg
+	return Dim + ts + Reset + " " + tint + label + Reset + " " + msg
 }
 
 func style(kind string, failure bool) (label, tint string) {
 	switch kind {
 	case "debug":
-		return "DBUG", ansiInfo
+		return "DBUG", Info
 	case "success":
-		return "OK", ansiOK
+		return "OK", Success
 	case "progress":
-		return "PROG", ansiProg
+		return "PROG", progress
 	case "warn":
-		return "WARN", ansiWarn
+		return "WARN", Warn
 	case "error":
 		if failure {
-			return "FAIL", ansiBold + ansiErr
+			return "FAIL", bold + Error
 		}
-		return "ERR", ansiErr
+		return "ERR", Error
 	}
-	return "INFO", ansiInfo
+	return "INFO", Info
 }
 
 var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;?]*[a-zA-Z]`)

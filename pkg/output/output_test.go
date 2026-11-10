@@ -244,3 +244,20 @@ func TestHelpers(t *testing.T) {
 		t.Errorf("ErrorCode = %q", got)
 	}
 }
+
+func TestStylePalette(t *testing.T) {
+	for got, want := range map[string]string{
+		StyleReset: "\x1b[0m", StyleDim: "\x1b[38;5;240m", StyleInfo: "\x1b[38;5;245m",
+		StyleWarn: "\x1b[38;5;214m", StyleError: "\x1b[38;5;196m", StyleSuccess: "\x1b[38;5;42m",
+		StyleKey: "\x1b[36m",
+	} {
+		if got != want {
+			t.Errorf("style %q, want %q", got, want)
+		}
+	}
+	o, _, stderr := newTest(t, WithColor(true))
+	o.Warn("w")
+	if want := StyleDim + "03:04:05" + StyleReset + " " + StyleWarn + "WARN" + StyleReset + " w\n"; stderr.String() != want {
+		t.Errorf("colored line = %q", stderr.String())
+	}
+}
