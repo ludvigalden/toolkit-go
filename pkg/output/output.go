@@ -35,6 +35,7 @@ type config struct {
 	verbosity Verbosity
 	color     bool
 	factories map[Mode]Factory
+	mw        []Middleware
 	tee       slog.Handler
 	now       func() time.Time
 }
@@ -60,6 +61,12 @@ func WithRenderer(m Mode, f Factory) Option {
 	}
 }
 
+// WithMiddleware wraps the selected mode's Factory. Repeatable; the
+// first registered is outermost.
+func WithMiddleware(m ...Middleware) Option {
+	return func(c *config) { c.mw = append(c.mw, m...) }
+}
+
 // WithLogHandler mirrors every diagnostic to h, whatever the
 // verbosity, so a log file can keep detail the terminal hides.
 func WithLogHandler(h slog.Handler) Option { return func(c *config) { c.tee = h } }
@@ -81,6 +88,9 @@ func New(stdout, stderr io.Writer, opts ...Option) (*Output, error) {
 	}
 	if !ok {
 		return nil, fmt.Errorf("output: no renderer for mode %q", c.mode)
+	}
+	for i := len(c.mw) - 1; i >= 0; i-- {
+		f = c.mw[i](f)
 	}
 	args := Args{Mode: c.mode, Verbosity: c.verbosity, Color: c.color}
 	r, err := f(stdout, stderr, args)

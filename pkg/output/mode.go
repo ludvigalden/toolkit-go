@@ -91,3 +91,7 @@ type Renderer interface {
 
 // Factory builds a Renderer for one Output.
 type Factory func(stdout, stderr io.Writer, args Args) (Renderer, error)
+
+// Middleware wraps the Factory of whatever mode New selects, built-in
+// or registered.
+type Middleware func(next Factory) Factory
