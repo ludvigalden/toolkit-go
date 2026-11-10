@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/ludvigalden/toolkit-go/pkg/proclock"
 	"github.com/ludvigalden/toolkit-go/pkg/supervisor"
+	"github.com/ludvigalden/toolkit-go/pkg/supervisor/setsid"
 )
 
 // Mode names the selected backend.
@@ -24,9 +26,13 @@ const (
 
 // Options carries the settings every backend may need.
 type Options struct {
-	// LockDir is the proclock root of the setsid fallback. Required, so
-	// selection behaves the same on every host.
+	// LockDir is the proclock root of the setsid fallback. Exactly one
+	// of LockDir and LockOptions is required, so selection behaves the
+	// same on every host.
 	LockDir string
+	// LockOptions locates each service's lock for the setsid fallback
+	// (see setsid.WithLockOptions).
+	LockOptions func(supervisor.Spec) proclock.Options
 	// Getenv reads HOME, USER and the XDG variables (nil: os.Getenv).
 	Getenv func(string) string
 	// Markers receives backend maintenance markers (zero: disabled).
@@ -70,8 +76,20 @@ func checkOptions(exec supervisor.CmdExecutor, o Options) error {
 	if exec == nil {
 		return errors.New("supervisor: selector: executor is nil")
 	}
-	if o.LockDir == "" {
-		return errors.New("supervisor: selector: Options.LockDir is required")
+	if (o.LockDir == "") == (o.LockOptions == nil) {
+		return errors.New("supervisor: selector: exactly one of Options.LockDir and Options.LockOptions is required")
 	}
 	return nil
+}
+
+func newSetsid(o Options) (*setsid.Setsid, error) {
+	var opts []setsid.Option
+	if o.LockOptions != nil {
+		opts = append(opts, setsid.WithLockOptions(o.LockOptions))
+	}
+	s, err := setsid.New(o.LockDir, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("supervisor: selector: %w", err)
+	}
+	return s, nil
 }

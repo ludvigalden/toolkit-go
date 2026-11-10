@@ -30,10 +30,11 @@ const (
 )
 
 // Setsid spawns services detached and finds them by their proclock. The
-// service must acquire proclock.Options{Dir: LockDir, Name: Spec.UnitName}
-// and publish an endpoint once it is ready. Construct it with New.
+// service must acquire proclock.Options{Dir: lockDir, Name: Spec.UnitName}
+// (or what WithLockOptions returns) and publish an endpoint once it is
+// ready. Construct it with New.
 type Setsid struct {
-	lockDir      string
+	lockOptions  func(supervisor.Spec) proclock.Options
 	startTimeout time.Duration
 	killGrace    time.Duration
 
@@ -54,15 +55,29 @@ func WithStartTimeout(d time.Duration) Option { return func(s *Setsid) { s.start
 // (0: DefaultKillGrace).
 func WithKillGrace(d time.Duration) Option { return func(s *Setsid) { s.killGrace = d } }
 
+// WithLockOptions locates each service's lock, for services that lock
+// somewhere other than <lockDir>/global/<UnitName>.lock. It replaces the
+// lockDir argument of New, which must then be "".
+func WithLockOptions(f func(supervisor.Spec) proclock.Options) Option {
+	return func(s *Setsid) { s.lockOptions = f }
+}
+
 // New returns a Setsid reading service locks under lockDir, the same
-// proclock root the services acquire in.
+// proclock root the services acquire in, or where WithLockOptions says.
 func New(lockDir string, opts ...Option) (*Setsid, error) {
-	if lockDir == "" {
-		return nil, errors.New("supervisor: setsid: lock dir is required")
-	}
-	s := &Setsid{lockDir: lockDir, installed: map[string]bool{}}
+	s := &Setsid{installed: map[string]bool{}}
 	for _, o := range opts {
 		o(s)
+	}
+	switch {
+	case lockDir != "" && s.lockOptions != nil:
+		return nil, errors.New("supervisor: setsid: lock dir and WithLockOptions are mutually exclusive")
+	case lockDir == "" && s.lockOptions == nil:
+		return nil, errors.New("supervisor: setsid: lock dir or WithLockOptions is required")
+	case lockDir != "":
+		s.lockOptions = func(spec supervisor.Spec) proclock.Options {
+			return proclock.Options{Dir: lockDir, Name: spec.UnitName}
+		}
 	}
 	if s.startTimeout <= 0 {
 		s.startTimeout = DefaultStartTimeout
@@ -225,7 +240,7 @@ func (s *Setsid) Status(_ context.Context, spec supervisor.Spec) (supervisor.Sta
 }
 
 func (s *Setsid) read(spec supervisor.Spec) (proclock.Owner, bool, error) {
-	return proclock.Read(proclock.Options{Dir: s.lockDir, Name: spec.UnitName}) //nolint:wrapcheck // carries the proclock prefix
+	return proclock.Read(s.lockOptions(spec)) //nolint:wrapcheck // carries the proclock prefix
 }
 
 // stillOwner re-reads the lock immediately before each signal and

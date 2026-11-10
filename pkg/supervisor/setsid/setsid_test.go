@@ -36,9 +36,7 @@ func serve(mode string) {
 	if mode == "stubborn" {
 		signal.Ignore(syscall.SIGTERM)
 	}
-	l, err := proclock.Acquire(context.Background(), proclock.Options{
-		Dir: os.Getenv("SETSID_TEST_DIR"), Name: os.Getenv("SETSID_TEST_NAME"), Endpoint: "unix:///ready",
-	})
+	l, err := proclock.Acquire(context.Background(), helperLock())
 	if err != nil {
 		os.Exit(1)
 	}
@@ -48,9 +46,7 @@ func serve(mode string) {
 		// abort the signal chain instead of escalating to SIGKILL.
 		_ = l.Release() //nolint:errcheck // helper
 		time.Sleep(20 * time.Millisecond)
-		l2, err := proclock.Acquire(context.Background(), proclock.Options{
-			Dir: os.Getenv("SETSID_TEST_DIR"), Name: os.Getenv("SETSID_TEST_NAME"), Endpoint: "unix:///ready",
-		})
+		l2, err := proclock.Acquire(context.Background(), helperLock())
 		if err != nil {
 			os.Exit(2)
 		}
@@ -60,6 +56,18 @@ func serve(mode string) {
 	}
 	<-sig
 	_ = l.Release() //nolint:errcheck // helper
+}
+
+// helperLock is the lock the helper service takes: an explicit file when
+// SETSID_TEST_FILE is set, else the Dir layout.
+func helperLock() proclock.Options {
+	o := proclock.Options{Name: os.Getenv("SETSID_TEST_NAME"), Endpoint: "unix:///ready"}
+	if f := os.Getenv("SETSID_TEST_FILE"); f != "" {
+		o.File = f
+	} else {
+		o.Dir = os.Getenv("SETSID_TEST_DIR")
+	}
+	return o
 }
 
 func spec(t *testing.T, dir, mode string) supervisor.Spec {
@@ -73,9 +81,40 @@ func spec(t *testing.T, dir, mode string) supervisor.Spec {
 	}
 }
 
-func TestNewRequiresLockDir(t *testing.T) {
+func TestNewRequiresOneLockSource(t *testing.T) {
 	if _, err := New(""); err == nil {
-		t.Fatal("want error")
+		t.Fatal("no lock source accepted")
+	}
+	both := WithLockOptions(func(supervisor.Spec) proclock.Options { return proclock.Options{} })
+	if _, err := New(t.TempDir(), both); err == nil {
+		t.Fatal("lock dir plus WithLockOptions accepted")
+	}
+}
+
+func TestLockOptionsLocateCallerPlacedLock(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "svc", "locks", "demo.lock")
+	s, err := New("", WithStartTimeout(10*time.Second), WithLockOptions(func(sp supervisor.Spec) proclock.Options {
+		return proclock.Options{File: file, Name: sp.UnitName}
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sp := spec(t, "", "serve")
+	t.Setenv("SETSID_TEST_FILE", file)
+	ctx := context.Background()
+	t.Cleanup(func() { _ = s.Stop(ctx, sp) })
+	if err := s.Start(ctx, sp); err != nil {
+		t.Fatal(err)
+	}
+	st, err := s.Status(ctx, sp)
+	if err != nil || !st.Running || st.PID <= 0 {
+		t.Fatalf("Status = %+v, %v", st, err)
+	}
+	if err := s.Stop(ctx, sp); err != nil {
+		t.Fatal(err)
+	}
+	if pidAlive(st.PID) {
+		t.Fatalf("pid %d alive after Stop", st.PID)
 	}
 }
 

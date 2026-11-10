@@ -8,7 +8,6 @@ import (
 
 	"github.com/ludvigalden/toolkit-go/pkg/supervisor"
 	"github.com/ludvigalden/toolkit-go/pkg/supervisor/launchd"
-	"github.com/ludvigalden/toolkit-go/pkg/supervisor/setsid"
 )
 
 // New probes the host and returns launchd when launchctl runs, else
@@ -34,9 +33,9 @@ func New(ctx context.Context, exec supervisor.CmdExecutor, o Options) (*Selected
 }
 
 func fallback(o Options, reason string) (*Selected, error) {
-	s, err := setsid.New(o.LockDir)
+	s, err := newSetsid(o)
 	if err != nil {
-		return nil, fmt.Errorf("supervisor: selector: %w", err)
+		return nil, err
 	}
 	return &Selected{Supervisor: s, mode: ModeSetsid, reason: reason}, nil
 }

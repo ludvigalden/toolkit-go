@@ -5,9 +5,12 @@ package selector
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/ludvigalden/toolkit-go/pkg/proclock"
 	"github.com/ludvigalden/toolkit-go/pkg/supervisor"
 )
 
@@ -61,7 +64,32 @@ func TestNewValidates(t *testing.T) {
 		t.Error("nil executor accepted")
 	}
 	if _, err := New(ctx, probe("yes", "running"), Options{}); err == nil {
-		t.Error("empty LockDir accepted")
+		t.Error("no lock source accepted")
+	}
+	both := opts(t)
+	both.LockOptions = func(supervisor.Spec) proclock.Options { return proclock.Options{} }
+	if _, err := New(ctx, probe("yes", "running"), both); err == nil {
+		t.Error("LockDir plus LockOptions accepted")
+	}
+}
+
+func TestLockOptionsReachSetsid(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "demo.lock")
+	o := opts(t)
+	o.LockDir = ""
+	o.LockOptions = func(sp supervisor.Spec) proclock.Options { return proclock.Options{File: file, Name: sp.UnitName} }
+	sel, err := New(context.Background(), probe("no", "running"), o)
+	if err != nil || sel.Mode() != ModeSetsid {
+		t.Fatalf("New = %v, %v", sel, err)
+	}
+	l, err := proclock.Acquire(context.Background(), proclock.Options{File: file, Name: "demo"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = l.Release() }()
+	st, err := sel.Status(context.Background(), supervisor.Spec{UnitName: "demo"})
+	if err != nil || !st.Running || st.PID != os.Getpid() {
+		t.Fatalf("Status = %+v, %v", st, err)
 	}
 }
 
