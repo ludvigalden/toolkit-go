@@ -65,16 +65,21 @@ func (w *Writer) Event(kind string, fields map[string]any) {
 }
 
 // Result adds data; a slice (other than []byte) contributes one record
-// per element.
-func (w *Writer) Result(data any) {
+// per element. A non-negative count replaces the envelope's tally for
+// this payload; streaming always counts the lines written.
+func (w *Writer) Result(data any, count int) {
+	before := w.count
 	v := reflect.ValueOf(data)
 	if v.Kind() == reflect.Slice && v.Type().Elem().Kind() != reflect.Uint8 {
 		for i := range v.Len() {
 			w.record(v.Index(i).Interface())
 		}
-		return
+	} else {
+		w.record(data)
 	}
-	w.record(data)
+	if count >= 0 && !w.stream {
+		w.count = before + count
+	}
 }
 
 func (w *Writer) record(v any) {

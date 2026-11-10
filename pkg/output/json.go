@@ -22,7 +22,13 @@ func newNDJSON(stdout, stderr io.Writer, args Args) (Renderer, error) {
 
 func (j *jsonRenderer) Log(r Record) { j.w.Diagnostic(string(r.Kind), r.Time, r.Message, r.Code) }
 
-func (j *jsonRenderer) Result(data any) { j.w.Result(resolveData(data, j.args)) }
+func (j *jsonRenderer) Result(data any) {
+	n := -1
+	if c, ok := data.(Countable); ok {
+		n = c.ResultCount()
+	}
+	j.w.Result(resolveData(data, j.args), n)
+}
 
 func (j *jsonRenderer) Event(kind string, fields map[string]any) { j.w.Event(kind, fields) }
 

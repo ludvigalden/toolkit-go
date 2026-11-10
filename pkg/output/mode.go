@@ -57,6 +57,13 @@ type DataFormattable interface {
 	FormatData(args Args) any
 }
 
+// Countable payloads say how many records they stand for. A json-mode
+// payload counts as ResultCount() records in result_records; ndjson
+// counts the lines it writes.
+type Countable interface {
+	ResultCount() int
+}
+
 // Kind classifies a diagnostic Record.
 type Kind string
 
