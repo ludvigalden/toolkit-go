@@ -20,7 +20,7 @@ type Output struct {
 	mu        sync.Mutex
 	r         Renderer
 	args      Args
-	tee       slog.Handler
+	tees      []slog.Handler
 	now       func() time.Time
 	failed    error
 	closed    bool
@@ -36,7 +36,7 @@ type config struct {
 	color     bool
 	factories map[Mode]Factory
 	mw        []Middleware
-	tee       slog.Handler
+	tees      []slog.Handler
 	now       func() time.Time
 }
 
@@ -69,7 +69,10 @@ func WithMiddleware(m ...Middleware) Option {
 
 // WithLogHandler mirrors every diagnostic to h, whatever the
 // verbosity, so a log file can keep detail the terminal hides.
-func WithLogHandler(h slog.Handler) Option { return func(c *config) { c.tee = h } }
+// Repeatable; each handler receives every record.
+func WithLogHandler(h slog.Handler) Option {
+	return func(c *config) { c.tees = append(c.tees, h) }
+}
 
 // WithClock replaces time.Now for diagnostic timestamps.
 func WithClock(now func() time.Time) Option { return func(c *config) { c.now = now } }
@@ -97,7 +100,7 @@ func New(stdout, stderr io.Writer, opts ...Option) (*Output, error) {
 	if err != nil {
 		return nil, fmt.Errorf("output: %s renderer: %w", c.mode, err)
 	}
-	return &Output{r: r, args: args, tee: c.tee, now: c.now}, nil
+	return &Output{r: r, args: args, tees: c.tees, now: c.now}, nil
 }
 
 func builtin(m Mode) (Factory, bool) {
@@ -188,8 +191,8 @@ func (o *Output) log(k Kind, err error, msg string, args []any) {
 	if err != nil {
 		rec.Code = ErrorCode(err)
 	}
-	if o.tee != nil {
-		o.mirror(rec)
+	for _, h := range o.tees {
+		mirror(h, rec)
 	}
 	if !o.args.Verbosity.admits(k, err != nil) {
 		return
@@ -201,16 +204,16 @@ func (o *Output) log(k Kind, err error, msg string, args []any) {
 	}
 }
 
-func (o *Output) mirror(rec Record) {
+func mirror(h slog.Handler, rec Record) {
 	lvl := kindLevel(rec.Kind)
-	if !o.tee.Enabled(context.Background(), lvl) {
+	if !h.Enabled(context.Background(), lvl) {
 		return
 	}
 	r := slog.NewRecord(rec.Time, lvl, rec.Message, 0)
 	if rec.Code != "" {
 		r.AddAttrs(slog.String("code", rec.Code))
 	}
-	_ = o.tee.Handle(context.Background(), r) //nolint:errcheck // a failing log sink must not fail the command
+	_ = h.Handle(context.Background(), r) //nolint:errcheck // a failing log sink must not fail the command
 }
 
 // ErrorCode returns the most specific code err carries: a diag code,

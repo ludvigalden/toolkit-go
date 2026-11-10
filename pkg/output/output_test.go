@@ -282,3 +282,13 @@ func TestVerbosityLevel(t *testing.T) {
 		}
 	}
 }
+
+func TestLogHandlerRepeatable(t *testing.T) {
+	var a, b bytes.Buffer
+	opts := &slog.HandlerOptions{Level: slog.LevelDebug}
+	o, _, _ := newTest(t, WithLogHandler(slog.NewJSONHandler(&a, opts)), WithLogHandler(slog.NewTextHandler(&b, opts)))
+	o.Info("both")
+	if !strings.Contains(a.String(), `"msg":"both"`) || !strings.Contains(b.String(), "msg=both") {
+		t.Errorf("a = %q, b = %q", a.String(), b.String())
+	}
+}
