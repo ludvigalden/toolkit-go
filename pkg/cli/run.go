@@ -83,6 +83,16 @@ func (r *Run) Close() error {
 	return err
 }
 
+// Command is the selected command's path below the root, e.g.
+// ["remote", "add"]; it is empty when no command was selected.
+func (r *Run) Command() []string {
+	var path []string
+	for n := r.Kong.Selected(); n != nil && n.Parent != nil; n = n.Parent {
+		path = append([]string{n.Name}, path...)
+	}
+	return path
+}
+
 // globalsCarrier finds the embedded GlobalFlags in a grammar.
 type globalsCarrier interface{ cliGlobals() *GlobalFlags }
 

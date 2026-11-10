@@ -407,3 +407,26 @@ func TestTempDir(t *testing.T) {
 		_ = r.Close()
 	}
 }
+
+type nestedRoot struct {
+	GlobalFlags
+	Remote struct {
+		Add showCmd `cmd:"" help:"Add a remote."`
+	} `cmd:"" help:"Manage remotes."`
+	Show showCmd `cmd:"" help:"Show."`
+}
+
+func TestCommand(t *testing.T) {
+	_, _, env := sandbox(t)
+	app := &App{Name: "demo", Stdout: io.Discard, Stderr: io.Discard, Getenv: func(k string) string { return env[k] }}
+	for args, want := range map[string]string{"remote add": "remote add", "show --upper": "show"} {
+		r, code := app.Parse(&nestedRoot{}, strings.Fields(args))
+		if r == nil {
+			t.Fatalf("%q: parse %d", args, code)
+		}
+		if got := strings.Join(r.Command(), " "); got != want {
+			t.Errorf("%q: Command() = %q, want %q", args, got, want)
+		}
+		_ = r.Close()
+	}
+}
