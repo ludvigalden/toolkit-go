@@ -9,16 +9,18 @@ import (
 // GlobalFlags are the flags every tool shares; embed it in the grammar
 // root. Each maps to config key stdout_format and env var
 // <PREFIX>_STDOUT_FORMAT (style; plain STDOUT_FORMAT is the fallback);
-// <PREFIX>_SESSION and <PREFIX>_DEBUG_LOG have no flag. Resolved values
-// live in Global.
+// <PREFIX>_DEBUG_LOG has no flag. --config-profile and --session-id
+// carry a prefix so subcommands stay free to define --profile and
+// --session; they read <PREFIX>_PROFILE and <PREFIX>_SESSION. Resolved
+// values live in Global.
 type GlobalFlags struct {
 	StdoutFormat    string   `name:"stdout-format" help:"Format of the data payload on stdout (text, json, ndjson, yamlish, quiet, or a mode the tool registers); diagnostics always go to stderr." default:"text"`
 	StdoutVerbosity string   `name:"stdout-verbosity" help:"Which diagnostics reach stderr: silent, quiet, error, warn, info, verbose, debug, trace (or 0-10). Default: warn."`
 	Color           string   `help:"Color on stderr: auto, always, never." default:"auto" enum:"auto,always,never" group:"Advanced"`
 	Config          []string `name:"config" help:"Extra config files, loaded in order above the discovered ones." type:"path" sep:"," group:"Advanced"`
 	EnvFile         []string `name:"env-file" help:"Dotenv files whose <PREFIX>_* entries act as environment variables." type:"path" sep:"," group:"Advanced"`
-	Profile         string   `help:"Config profile to layer from the user config directory." group:"Advanced"`
-	Session         string   `help:"Session ID shared by related invocations." group:"Advanced"`
+	Profile         string   `name:"config-profile" help:"Config profile to layer from the user config directory." group:"Advanced"`
+	Session         string   `name:"session-id" help:"Session ID shared by related invocations." group:"Advanced"`
 }
 
 func (g *GlobalFlags) cliGlobals() *GlobalFlags { return g }

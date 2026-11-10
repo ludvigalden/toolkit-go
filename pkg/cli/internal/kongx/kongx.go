@@ -89,10 +89,23 @@ func FlagOverrides(kctx *kong.Context) map[string]any {
 		key := strings.ReplaceAll(p.Flag.Name, "-", "_")
 		if owner := ownerPath(selected, p.Flag); owner != "" {
 			key = owner + "." + key
+		} else {
+			key = rootKey(key)
 		}
 		out[key] = kctx.FlagValue(p.Flag)
 	}
 	return out
+}
+
+// rootKey maps the prefixed root flags to their plain config keys.
+func rootKey(key string) string {
+	switch key {
+	case "session_id":
+		return "session"
+	case "config_profile":
+		return "profile"
+	}
+	return key
 }
 
 // ownerPath is the dotted path of the selected command when it declares

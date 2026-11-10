@@ -319,3 +319,43 @@ func TestStdoutFormatFallback(t *testing.T) {
 		t.Errorf("tool fallbacks: code %d stdout %q", code, out.String())
 	}
 }
+
+type clashRoot struct {
+	GlobalFlags
+	Deploy deployCmd `cmd:"" help:"A command with its own --profile and --session."`
+}
+
+type deployCmd struct {
+	Profile string `help:"Deployment profile."`
+	Session string `help:"Remote session."`
+}
+
+func (c *deployCmd) Run(out *output.Output, k *koanf.Koanf, g *Global) error {
+	out.Result(map[string]any{
+		"profile": c.Profile, "session": c.Session,
+		"key": k.String("deploy.profile"), "global": g.SessionID, "global_profile": g.Profile,
+	})
+	return nil
+}
+
+func TestRootFlagsLeaveCommonNamesFree(t *testing.T) {
+	home, _, env := sandbox(t)
+	write(t, filepath.Join(home, ".config", "demo", "profiles", "ci.yaml"), "x: 1\n")
+	var out, errb bytes.Buffer
+	app := &App{Name: "demo", Stdout: &out, Stderr: &errb, Getenv: func(k string) string { return env[k] }}
+	code := app.Main(&clashRoot{}, []string{
+		"--stdout-format=json", "--session-id=s9", "--config-profile=ci",
+		"deploy", "--profile=prod", "--session=remote",
+	})
+	if code != 0 {
+		t.Fatalf("code %d stderr %q", code, errb.String())
+	}
+	for _, want := range []string{
+		`"profile":"prod"`, `"session":"remote"`, `"key":"prod"`,
+		`"global":"s9"`, `"global_profile":"ci"`,
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("stdout %q lacks %s", out.String(), want)
+		}
+	}
+}
