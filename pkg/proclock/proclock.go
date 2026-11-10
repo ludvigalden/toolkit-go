@@ -41,13 +41,16 @@ func (e *HeldError) Error() string {
 // Unwrap returns ErrHeld.
 func (e *HeldError) Unwrap() error { return ErrHeld }
 
-// Options names a lock and configures acquisition. Dir and Name are
-// required; lock files live at <Dir>/global/<Name>.lock, or under a
-// per-repository directory when Repo is set.
+// Options names a lock and configures acquisition. Set either File, or
+// Dir and Name; Dir-based lock files live at <Dir>/global/<Name>.lock,
+// or under a per-repository directory when Repo is set.
 type Options struct {
+	// File is an explicit lock file path, for callers whose lock
+	// location is already a contract. It excludes Dir and Repo.
+	File string
 	// Dir is the root holding all lock files (for example a cache dir).
 	Dir string
-	// Name is the logical lock name.
+	// Name is the logical lock name; with File it only labels the owner.
 	Name string
 	// Repo scopes the lock to a repository; symlinked spellings of one
 	// directory share a lock.
@@ -70,8 +73,14 @@ type Options struct {
 // Path returns the lock file path for opts without touching the disk
 // beyond resolving Repo.
 func (o Options) Path() (string, error) {
+	if o.File != "" {
+		if o.Dir != "" || o.Repo != "" {
+			return "", errors.New("proclock: Options.File excludes Options.Dir and Options.Repo")
+		}
+		return filepath.Clean(o.File), nil
+	}
 	if o.Dir == "" || o.Name == "" {
-		return "", errors.New("proclock: Options.Dir and Options.Name are required")
+		return "", errors.New("proclock: Options.File, or Options.Dir and Options.Name, are required")
 	}
 	if o.Repo == "" {
 		return filepath.Join(o.Dir, "global", o.Name+".lock"), nil
@@ -81,6 +90,14 @@ func (o Options) Path() (string, error) {
 		return "", fmt.Errorf("proclock: repo segment: %w", err)
 	}
 	return filepath.Join(o.Dir, "repos", filepath.Clean("/"+seg), o.Name+".lock"), nil
+}
+
+// label names the lock in errors; a File lock may leave Name empty.
+func (o Options) label() string {
+	if o.Name == "" {
+		return o.File
+	}
+	return o.Name
 }
 
 // Lock is an acquired lock. Its methods are safe for concurrent use.
@@ -167,7 +184,7 @@ func acquire(ctx context.Context, path string, opts Options) (*Lock, error) {
 	corrupt := 0
 	for {
 		if err := ctx.Err(); err != nil {
-			return nil, timeout(opts.Name, err)
+			return nil, timeout(opts.label(), err)
 		}
 		l, err := tryAcquire(path, opts)
 		if l != nil || err != nil {
@@ -182,10 +199,10 @@ func acquire(ctx context.Context, path string, opts Options) (*Lock, error) {
 		foreign := errors.Is(derr, errFutureSchema)
 		if (rerr != nil || derr != nil) && !foreign {
 			if corrupt++; corrupt >= maxCorruptStreak {
-				return nil, fmt.Errorf("proclock: acquire %s: %w", opts.Name, ErrCorrupt)
+				return nil, fmt.Errorf("proclock: acquire %s: %w", opts.label(), ErrCorrupt)
 			}
 			if err := lockfs.Sleep(ctx, 50*time.Millisecond); err != nil {
-				return nil, timeout(opts.Name, err)
+				return nil, timeout(opts.label(), err)
 			}
 			continue
 		}
@@ -193,7 +210,7 @@ func acquire(ctx context.Context, path string, opts Options) (*Lock, error) {
 		if !foreign && !alive(owner) {
 			// The holder is exiting; the kernel frees the flock shortly.
 			if err := lockfs.Sleep(ctx, 10*time.Millisecond); err != nil {
-				return nil, timeout(opts.Name, err)
+				return nil, timeout(opts.label(), err)
 			}
 			continue
 		}
@@ -201,7 +218,7 @@ func acquire(ctx context.Context, path string, opts Options) (*Lock, error) {
 			return nil, &HeldError{Owner: owner, Path: path}
 		}
 		if err := lockfs.WaitFree(ctx, path); err != nil {
-			return nil, timeout(opts.Name, err)
+			return nil, timeout(opts.label(), err)
 		}
 	}
 }
@@ -220,7 +237,11 @@ func tryAcquire(path string, opts Options) (*Lock, error) {
 		_ = f.Close() //nolint:errcheck // acquisition failed
 		return nil, err
 	}
-	lockfs.Sweep(filepath.Dir(path), path, staleAge, deadBody)
+	// An explicit File may sit in a directory proclock does not own, so
+	// only the Dir layout sweeps its siblings.
+	if opts.File == "" {
+		lockfs.Sweep(filepath.Dir(path), path, staleAge, deadBody)
+	}
 	return &Lock{path: path, file: f, owner: owner}, nil
 }
 
@@ -304,7 +325,7 @@ func WaitUnlock(ctx context.Context, opts Options) error {
 		}
 	}
 	if err := lockfs.WaitFree(ctx, path); err != nil {
-		return fmt.Errorf("proclock: wait %s: %w: %w", opts.Name, ErrTimeout, err)
+		return fmt.Errorf("proclock: wait %s: %w: %w", opts.label(), ErrTimeout, err)
 	}
 	return nil
 }

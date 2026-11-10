@@ -235,3 +235,77 @@ func TestSweepRemovesStale(t *testing.T) {
 		t.Fatalf("stale lock survived the sweep: %v", err)
 	}
 }
+
+func TestExplicitFile(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "nested", "store.lock")
+	opts := Options{File: file, Name: "store"}
+	if p, err := opts.Path(); err != nil || p != file {
+		t.Fatalf("Path = %q, %v", p, err)
+	}
+	// A foreign sibling must survive: File callers do not own the dir.
+	sibling := filepath.Join(dir, "nested", "other.lock")
+	if err := os.MkdirAll(filepath.Dir(sibling), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sibling, []byte("not ours"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(sibling, old, old); err != nil {
+		t.Fatal(err)
+	}
+	l, err := Acquire(context.Background(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l.Path() != file {
+		t.Fatalf("Lock.Path = %q", l.Path())
+	}
+	if _, err := os.Stat(sibling); err != nil {
+		t.Fatalf("sibling swept: %v", err)
+	}
+	if err := l.Publish("unix:///s", nil); err != nil {
+		t.Fatal(err)
+	}
+	if o, found, err := Read(Options{File: file}); err != nil || !found || o.Endpoint != "unix:///s" || o.Name != "store" {
+		t.Fatalf("Read = %+v %v %v", o, found, err)
+	}
+	_, err = Acquire(context.Background(), opts)
+	var held *HeldError
+	if !errors.As(err, &held) || held.Path != file {
+		t.Fatalf("contended Acquire = %v", err)
+	}
+	time.AfterFunc(50*time.Millisecond, func() { _ = l.Release() })
+	if err := WaitUnlock(context.Background(), Options{File: file, Timeout: 5 * time.Second}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(file); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("lock file survived Release: %v", err)
+	}
+}
+
+func TestExplicitFileExcludesLayout(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "x.lock")
+	for _, o := range []Options{
+		{File: file, Dir: dir},
+		{File: file, Repo: dir},
+	} {
+		if _, err := o.Path(); err == nil || !strings.Contains(err.Error(), "excludes") {
+			t.Errorf("Path(%+v) err = %v", o, err)
+		}
+		if _, err := Acquire(context.Background(), o); err == nil {
+			t.Errorf("Acquire(%+v) accepted", o)
+		}
+		if _, _, err := Read(o); err == nil {
+			t.Errorf("Read(%+v) accepted", o)
+		}
+		if err := WaitUnlock(context.Background(), o); err == nil {
+			t.Errorf("WaitUnlock(%+v) accepted", o)
+		}
+	}
+	if _, err := (Options{}).Path(); err == nil {
+		t.Error("empty Options accepted")
+	}
+}
