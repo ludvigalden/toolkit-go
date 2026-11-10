@@ -35,13 +35,16 @@ type Run struct {
 	release func() error
 }
 
-// Paths are the tool's XDG directories. None is created; make the ones
+// Paths are the tool's directories. None is created; make the ones
 // you write to.
 type Paths struct {
 	Config string
 	Cache  string
 	State  string
 	Data   string
+	// Temp is $TMPDIR/<name>/<session>, removed by Run.Close; runs that
+	// share a session ID share it.
+	Temp string
 }
 
 // Exec runs the selected command, reports a returned error through
@@ -60,8 +63,8 @@ func (r *Run) Exec(binds ...any) int {
 	return int(errkind.ExitCode(err))
 }
 
-// Close finishes the output document, then closes the debug log and
-// whatever App.ConfigureOutput opened.
+// Close finishes the output document, closes the debug log and
+// whatever App.ConfigureOutput opened, and removes Dirs.Temp.
 func (r *Run) Close() error {
 	err := r.Out.Close()
 	if r.sink != nil {
@@ -71,6 +74,11 @@ func (r *Run) Close() error {
 	if r.release != nil {
 		err = errors.Join(err, r.release())
 		r.release = nil
+	}
+	if t := r.Global.Dirs.Temp; t != "" {
+		if rerr := os.RemoveAll(t); rerr != nil {
+			err = errors.Join(err, fmt.Errorf("temp dir: %w", rerr))
+		}
 	}
 	return err
 }
@@ -153,6 +161,15 @@ func (a *App) global(k *koanf.Koanf, cwd, profile string, dirs xdg.Dirs) (Global
 	if session == "" {
 		session = wiring.SessionID()
 	}
+	// The session names a directory Close removes, so it must not
+	// climb out of the tool's temp root.
+	if session == "." || session == ".." || strings.ContainsRune(session, '/') {
+		return Global{}, fmt.Errorf("invalid session ID %q: must be a single path element", session)
+	}
+	tmp := a.getenv("TMPDIR")
+	if tmp == "" {
+		tmp = os.TempDir()
+	}
 	return Global{
 		AppName: a.Name, Profile: profile, Cwd: cwd, ExeDir: exeDir,
 		SessionID: session, OutputMode: mode, Verbosity: verb,
@@ -162,6 +179,7 @@ func (a *App) global(k *koanf.Koanf, cwd, profile string, dirs xdg.Dirs) (Global
 			Cache:  filepath.Join(dirs.CacheHome, a.Name),
 			State:  filepath.Join(dirs.StateHome, a.Name),
 			Data:   filepath.Join(dirs.DataHome, a.Name),
+			Temp:   filepath.Join(tmp, a.Name, session),
 		},
 	}, nil
 }

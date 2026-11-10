@@ -359,3 +359,51 @@ func TestRootFlagsLeaveCommonNamesFree(t *testing.T) {
 		}
 	}
 }
+
+type tempRoot struct {
+	GlobalFlags
+	Touch touchCmd `cmd:"" help:"Write a file under Dirs.Temp."`
+}
+
+type touchCmd struct{}
+
+func (touchCmd) Run(g *Global) error {
+	if err := os.MkdirAll(g.Dirs.Temp, 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(g.Dirs.Temp, "f"), nil, 0o600)
+}
+
+func TestTempDir(t *testing.T) {
+	_, project, env := sandbox(t)
+	env["TMPDIR"] = filepath.Join(project, "tmp")
+	app := &App{Name: "demo", Stdout: io.Discard, Stderr: io.Discard, Getenv: func(k string) string { return env[k] }}
+	r, code := app.Parse(&tempRoot{}, []string{"--session-id=s1", "touch"})
+	if r == nil {
+		t.Fatalf("parse: %d", code)
+	}
+	want := filepath.Join(project, "tmp", "demo", "s1")
+	if r.Global.Dirs.Temp != want {
+		t.Fatalf("Temp = %q, want %q", r.Global.Dirs.Temp, want)
+	}
+	if _, err := os.Stat(want); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Temp created eagerly: %v", err)
+	}
+	if code := r.Exec(); code != 0 {
+		t.Fatalf("exec = %d", code)
+	}
+	if _, err := os.Stat(want); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("Temp survived Close: %v", err)
+	}
+	for _, bad := range []string{"..", "a/b"} {
+		if r, code := app.Parse(&tempRoot{}, []string{"--session-id=" + bad, "touch"}); r != nil || code != int(exitcode.Usage) {
+			t.Errorf("session %q: code %d, want Usage", bad, code)
+		}
+	}
+	delete(env, "TMPDIR")
+	if r, _ := app.Parse(&tempRoot{}, []string{"touch"}); r == nil || filepath.Dir(filepath.Dir(r.Global.Dirs.Temp)) != filepath.Clean(os.TempDir()) {
+		t.Errorf("no TMPDIR: Temp not under os.TempDir()")
+	} else {
+		_ = r.Close()
+	}
+}
