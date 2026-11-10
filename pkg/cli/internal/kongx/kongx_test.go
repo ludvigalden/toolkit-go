@@ -2,15 +2,24 @@ package kongx
 
 import "testing"
 
-func TestQuietRequested(t *testing.T) {
-	for args, want := range map[string]bool{
-		"--stdout-format=quiet":    true,
-		"--stdout-verbosity 0":     true,
-		"--stdout-format=json":     false,
-		"-- --stdout-format=quiet": false,
+func TestSilentRequested(t *testing.T) {
+	for _, c := range []struct {
+		args, env string
+		want      bool
+	}{
+		{"--stdout-verbosity 0", "", true},
+		{"--stdout-verbosity=Silent", "", true},
+		{"--stdout-verbosity=quiet", "", false},
+		{"--stdout-format=quiet", "", false},
+		{"-- --stdout-verbosity=silent", "", false},
+		{"show", "silent", true},
+		{"show", "0", true},
+		{"show", "quiet", false},
+		{"--stdout-verbosity=warn", "silent", false},
+		{"--stdout-verbosity=warn --stdout-verbosity=silent", "", true},
 	} {
-		if got := QuietRequested(split(args)); got != want {
-			t.Errorf("%q: %v", args, got)
+		if got := SilentRequested(split(c.args), c.env); got != c.want {
+			t.Errorf("%q env %q: %v", c.args, c.env, got)
 		}
 	}
 }

@@ -181,9 +181,20 @@ func TestExitCodes(t *testing.T) {
 			t.Errorf("%v: failure wrote stdout %q", c.args, out)
 		}
 	}
-	if code, _, errOut := run(t, env, "--stdout-format=quiet", "nope"); code != int(exitcode.Usage) || errOut != "" {
-		t.Errorf("quiet parse error: code %d stderr %q", code, errOut)
+	if code, _, errOut := run(t, env, "--stdout-verbosity=silent", "nope"); code != int(exitcode.Usage) || errOut != "" {
+		t.Errorf("silent parse error: code %d stderr %q", code, errOut)
 	}
+	if code, _, errOut := run(t, env, "--stdout-verbosity=quiet", "nope"); code != int(exitcode.Usage) || !strings.Contains(errOut, "Usage: demo") {
+		t.Errorf("quiet parse error hid usage: code %d stderr %q", code, errOut)
+	}
+	if code, _, errOut := run(t, env, "--stdout-format=quiet", "nope"); code != int(exitcode.Usage) || errOut == "" {
+		t.Errorf("quiet format hid usage: code %d stderr %q", code, errOut)
+	}
+	env["DEMO_STDOUT_VERBOSITY"] = "0"
+	if code, _, errOut := run(t, env, "nope"); code != int(exitcode.Usage) || errOut != "" {
+		t.Errorf("silent from env: code %d stderr %q", code, errOut)
+	}
+	delete(env, "DEMO_STDOUT_VERBOSITY")
 	if _, _, errOut := run(t, env, "--help"); !strings.Contains(errOut, "Usage: demo") {
 		t.Errorf("help not on stderr: %q", errOut)
 	}

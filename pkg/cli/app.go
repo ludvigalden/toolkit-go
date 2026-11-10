@@ -65,7 +65,9 @@ func (a *App) Main(grammar any, args []string, binds ...any) int {
 // Parse parses args into grammar and prepares the invocation. A nil Run
 // means exit with the returned code: 0 after --help, Usage for bad
 // arguments or a bad command-line --stdout-format, Config or CantCreate
-// when config or output wiring fails for other reasons.
+// when config or output wiring fails for other reasons. Usage text for
+// bad arguments is withheld only at verbosity silent (flag or process
+// environment).
 func (a *App) Parse(grammar any, args []string) (*Run, int) {
 	stderr := a.stderr()
 	parser, err := kong.New(grammar,
@@ -81,7 +83,8 @@ func (a *App) Parse(grammar any, args []string) (*Run, int) {
 		_, _ = fmt.Fprintf(stderr, "%s: invalid grammar: %v\n", a.Name, err)
 		return nil, int(exitcode.Software)
 	}
-	kctx, code, done := kongx.Parse(parser, args, int(exitcode.Usage))
+	silent := kongx.SilentRequested(args, a.getenv(a.envPrefix()+"STDOUT_VERBOSITY"))
+	kctx, code, done := kongx.Parse(parser, args, int(exitcode.Usage), silent)
 	if done {
 		return nil, code
 	}

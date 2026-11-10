@@ -1,5 +1,5 @@
 // Package kongx holds the Kong plumbing behind cli: parsing without
-// letting Kong exit the process, honoring a quiet request before flags
+// letting Kong exit the process, honoring a silent request before flags
 // apply, and mapping explicitly given flags to config keys.
 package kongx
 
@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+
+	"github.com/ludvigalden/toolkit-go/pkg/output"
 )
 
 // ExitSignal carries Kong's exit request (after --help) out of Parse
@@ -20,8 +22,8 @@ func Exit(code int) { panic(ExitSignal(code)) }
 
 // Parse parses args. done reports that the caller should exit with
 // code: after --help, or with usageCode for bad arguments (printed to
-// the parser's stderr unless a quiet mode was requested).
-func Parse(parser *kong.Kong, args []string, usageCode int) (kctx *kong.Context, code int, done bool) {
+// the parser's stderr unless silent).
+func Parse(parser *kong.Kong, args []string, usageCode int, silent bool) (kctx *kong.Context, code int, done bool) {
 	defer func() {
 		if r := recover(); r != nil {
 			sig, ok := r.(ExitSignal)
@@ -33,7 +35,7 @@ func Parse(parser *kong.Kong, args []string, usageCode int) (kctx *kong.Context,
 	}()
 	kctx, err := parser.Parse(args)
 	if err != nil {
-		if !QuietRequested(args) {
+		if !silent {
 			var pe *kong.ParseError
 			if errors.As(err, &pe) && pe.Context != nil {
 				_ = pe.Context.PrintUsage(true) //nolint:errcheck // usage on stderr is best effort
@@ -45,25 +47,33 @@ func Parse(parser *kong.Kong, args []string, usageCode int) (kctx *kong.Context,
 	return kctx, 0, false
 }
 
-// QuietRequested scans raw tokens for a quiet request, because a parse
-// failure happens before any flag takes effect.
-func QuietRequested(args []string) bool {
+// SilentRequested reports whether verbosity silent was asked for: by
+// the last --stdout-verbosity token, else by env (the variable's value).
+// It scans raw tokens because a parse failure happens before any flag
+// takes effect.
+func SilentRequested(args []string, env string) bool {
+	val, found := env, false
 	for i, a := range args {
 		if a == "--" {
-			return false
+			break
 		}
-		name, val, hasVal := strings.Cut(a, "=")
-		if name != "--stdout-format" && name != "--stdout-verbosity" {
+		name, v, hasVal := strings.Cut(a, "=")
+		if name != "--stdout-verbosity" {
 			continue
 		}
-		if !hasVal && i+1 < len(args) {
-			val = args[i+1]
+		if !hasVal {
+			v = ""
+			if i+1 < len(args) {
+				v = args[i+1]
+			}
 		}
-		if val == "quiet" || val == "silent" || val == "0" || val == "1" {
-			return true
-		}
+		val, found = v, true
 	}
-	return false
+	if !found && val == "" {
+		return false
+	}
+	verb, err := output.ParseVerbosity(val)
+	return err == nil && verb == output.VerbositySilent
 }
 
 // FlagOverrides maps explicitly given flags to config keys: root flags
