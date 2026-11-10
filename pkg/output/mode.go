@@ -45,6 +45,9 @@ type Args struct {
 	Color     bool
 }
 
+// Structured reports whether results are encoded as json or ndjson.
+func (a Args) Structured() bool { return a.Mode == ModeJSON || a.Mode == ModeNDJSON }
+
 // TextFormattable payloads render their own text in text-like modes.
 // Output strips ANSI from the result when color is off.
 type TextFormattable interface {

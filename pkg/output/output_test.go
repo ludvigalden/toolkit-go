@@ -261,3 +261,11 @@ func TestStylePalette(t *testing.T) {
 		t.Errorf("colored line = %q", stderr.String())
 	}
 }
+
+func TestArgsStructured(t *testing.T) {
+	for m, want := range map[Mode]bool{ModeJSON: true, ModeNDJSON: true, ModeText: false, ModeYamlish: false, ModeQuiet: false, "custom": false} {
+		if got := (Args{Mode: m}).Structured(); got != want {
+			t.Errorf("%s: Structured = %v", m, got)
+		}
+	}
+}
