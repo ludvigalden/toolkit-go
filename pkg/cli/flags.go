@@ -9,9 +9,8 @@ import (
 // GlobalFlags are the flags every tool shares; embed it in the grammar
 // root. Each maps to config key stdout_format and env var
 // <PREFIX>_STDOUT_FORMAT (style; plain STDOUT_FORMAT is the fallback);
-// <PREFIX>_DEBUG_LOG has no flag. --config-profile and --session-id
-// carry a prefix so subcommands stay free to define --profile and
-// --session; they read <PREFIX>_PROFILE and <PREFIX>_SESSION. Resolved
+// <PREFIX>_DEBUG_LOG has no flag. --config-profile reads
+// <PREFIX>_PROFILE and leaves --profile free for subcommands. Resolved
 // values live in Global.
 type GlobalFlags struct {
 	StdoutFormat    string   `name:"stdout-format" help:"Format of the data payload on stdout (text, json, ndjson, yamlish, quiet, or a mode the tool registers); diagnostics always go to stderr." default:"text"`
@@ -20,10 +19,16 @@ type GlobalFlags struct {
 	Config          []string `name:"config" help:"Extra config files, loaded in order above the discovered ones." type:"path" sep:"," group:"Advanced"`
 	EnvFile         []string `name:"env-file" help:"Dotenv files whose <PREFIX>_* entries act as environment variables." type:"path" sep:"," group:"Advanced"`
 	Profile         string   `name:"config-profile" help:"Config profile to layer from the user config directory." group:"Advanced"`
-	Session         string   `name:"session-id" help:"Session ID shared by related invocations." group:"Advanced"`
 }
 
 func (g *GlobalFlags) cliGlobals() *GlobalFlags { return g }
+
+// SessionFlags adds --session-id; embed it beside GlobalFlags to opt
+// in. Without it Global.SessionID still resolves from <PREFIX>_SESSION
+// or config, and commands may declare their own --session-id.
+type SessionFlags struct {
+	Session string `name:"session-id" help:"Session ID shared by related invocations." group:"Advanced"`
+}
 
 // Global holds the resolved values every tool shares. Tool-specific
 // values stay in Run.Config under "<name>.".

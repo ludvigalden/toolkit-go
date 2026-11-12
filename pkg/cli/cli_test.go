@@ -322,6 +322,7 @@ func TestStdoutFormatFallback(t *testing.T) {
 
 type clashRoot struct {
 	GlobalFlags
+	SessionFlags
 	Deploy deployCmd `cmd:"" help:"A command with its own --profile and --session."`
 }
 
@@ -360,8 +361,59 @@ func TestRootFlagsLeaveCommonNamesFree(t *testing.T) {
 	}
 }
 
+// ownSessionRoot leaves out SessionFlags, so its commands may declare
+// --session-id themselves.
+type ownSessionRoot struct {
+	GlobalFlags
+	Hook struct {
+		Guard guardCmd `cmd:"" help:"Watch a session."`
+	} `cmd:"" help:"Hooks."`
+}
+
+type guardCmd struct {
+	Session string `name:"session-id" help:"Watched session."`
+}
+
+func (c *guardCmd) Run(out *output.Output, g *Global) error {
+	out.Result(map[string]any{"own": c.Session, "global": g.SessionID})
+	return nil
+}
+
+func TestSessionFlagOptOut(t *testing.T) {
+	_, _, env := sandbox(t)
+	env["DEMO_SESSION"] = "fromenv"
+	var out, errb bytes.Buffer
+	app := &App{Name: "demo", Stdout: &out, Stderr: &errb, Getenv: func(k string) string { return env[k] }}
+	code := app.Main(&ownSessionRoot{}, []string{"--stdout-format=json", "hook", "guard", "--session-id=hook-1"})
+	if code != 0 {
+		t.Fatalf("code %d stderr %q", code, errb.String())
+	}
+	for _, want := range []string{`"own":"hook-1"`, `"global":"fromenv"`} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("stdout %q lacks %s", out.String(), want)
+		}
+	}
+	var parent struct {
+		GlobalFlags
+		Hook struct {
+			Session string  `name:"session-id" help:"Hook session."`
+			Show    showCmd `cmd:"" help:"Show."`
+		} `cmd:"" help:"Hooks."`
+	}
+	r, code := app.Parse(&parent, []string{"hook", "--session-id=hook-2", "show"})
+	if r == nil || r.Global.SessionID != "fromenv" || parent.Hook.Session != "hook-2" {
+		t.Errorf("parent-owned --session-id: code %d run %v", code, r)
+	} else {
+		_ = r.Close()
+	}
+	if r, code := app.Parse(&ownSessionRoot{}, []string{"--session-id=x", "hook", "guard"}); r != nil || code != int(exitcode.Usage) {
+		t.Errorf("root --session-id without SessionFlags: code %d", code)
+	}
+}
+
 type tempRoot struct {
 	GlobalFlags
+	SessionFlags
 	Touch touchCmd `cmd:"" help:"Write a file under Dirs.Temp."`
 }
 

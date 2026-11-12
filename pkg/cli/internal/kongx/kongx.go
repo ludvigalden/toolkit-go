@@ -89,7 +89,7 @@ func FlagOverrides(kctx *kong.Context) map[string]any {
 		key := strings.ReplaceAll(p.Flag.Name, "-", "_")
 		if owner := ownerPath(selected, p.Flag); owner != "" {
 			key = owner + "." + key
-		} else {
+		} else if ownedBy(kctx.Model.Node, p.Flag) {
 			key = rootKey(key)
 		}
 		out[key] = kctx.FlagValue(p.Flag)
@@ -106,6 +106,15 @@ func rootKey(key string) string {
 		return "profile"
 	}
 	return key
+}
+
+func ownedBy(n *kong.Node, f *kong.Flag) bool {
+	for _, own := range n.Flags {
+		if own == f {
+			return true
+		}
+	}
+	return false
 }
 
 // ownerPath is the dotted path of the selected command when it declares
