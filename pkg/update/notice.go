@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ludvigalden/toolkit-go/pkg/update/internal/noticecache"
+	"github.com/ludvigalden/toolkit-go/pkg/xdg"
 )
 
 // DefaultNoticeTTL is how long a check result is reused before the
@@ -31,8 +32,10 @@ type Notice struct {
 	TTL time.Duration
 	// CacheDir overrides <user cache dir>/<tool>.
 	CacheDir string
-	// UserCacheDir resolves the stdlib user cache directory when
-	// CacheDir is empty; nil means os.UserCacheDir.
+	// UserCacheDir resolves the user cache directory when CacheDir is
+	// empty; nil means $XDG_CACHE_HOME (default ~/.cache) via package
+	// xdg on every platform, matching the rest of the toolkit rather
+	// than os.UserCacheDir's ~/Library/Caches on macOS.
 	UserCacheDir func() (string, error)
 	// Out defaults to os.Stderr.
 	Out io.Writer
@@ -41,7 +44,7 @@ type Notice struct {
 	Interactive func() bool
 	// Now is the clock; nil means time.Now.
 	Now func() time.Time
-	// Getenv reads the opt-out variables; nil means os.Getenv.
+	// Getenv reads the opt-out and XDG variables; nil means os.Getenv.
 	Getenv func(string) string
 }
 
@@ -80,7 +83,7 @@ func (n *Notice) Check(ctx context.Context) (latest Release, found bool) {
 	if dir == "" {
 		resolve := n.UserCacheDir
 		if resolve == nil {
-			resolve = os.UserCacheDir
+			resolve = xdgCacheHome(n.Getenv)
 		}
 		if d, err := resolve(); err == nil {
 			dir = filepath.Join(d, n.Tool)
@@ -123,3 +126,15 @@ func (n *Notice) Show(ctx context.Context) bool {
 
 // IsUnavailable reports whether err means a capability is absent.
 func IsUnavailable(err error) bool { return errors.Is(err, ErrUnavailable) }
+
+// xdgCacheHome resolves $XDG_CACHE_HOME (default ~/.cache) through getenv
+// (nil means os.Getenv).
+func xdgCacheHome(getenv func(string) string) func() (string, error) {
+	return func() (string, error) {
+		d, err := xdg.Resolve(getenv)
+		if err != nil {
+			return "", fmt.Errorf("update: resolve cache home: %w", err)
+		}
+		return d.CacheHome, nil
+	}
+}
