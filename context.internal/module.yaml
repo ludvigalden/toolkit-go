@@ -1,0 +1,9 @@
+title: toolkit-go internal
+description: >-
+  Development-only context for work on toolkit-go itself: the design
+  decisions the module was shaped by, when a package is admitted, and
+  the gates the committed context module and its examples pass.
+path: github.com/ludvigalden/toolkit-go/context.internal
+private: true
+requires:
+  - github.com/ludvigalden/toolkit-go
